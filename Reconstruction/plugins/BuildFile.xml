@@ -1,0 +1,10 @@
+<use name="CommonTools/Utils"/>
+<use name="DataFormats/L1TCalorimeter"/>
+<use name="DataFormats/L1Trigger"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/MessageLogger"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/Utilities"/>
+<use name="L1TriggerScouting/Utilities"/>
+<use name="fastjet"/>
+<flags EDM_PLUGIN="1"/>

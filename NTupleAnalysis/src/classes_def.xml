@@ -1,0 +1,5 @@
+<lcgdict>
+  <class name="AnalysisDriverBase"/>
+  <class name="JetMETPerformanceAnalysisDriver"/>
+  <class name="JetResponseAnalysisDriver"/>
+</lcgdict>
