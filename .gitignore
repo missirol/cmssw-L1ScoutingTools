@@ -1,1 +1,17 @@
+*~
 __pycache__
+*.pyc
+*.root
+*.pdf
+*.png
+*.JPG
+*.jpg
+*.jpeg
+*.tar
+*.tar.gz
+*.txt
+*.log
+output_*
+tmp*
+*_tmp/
+old/

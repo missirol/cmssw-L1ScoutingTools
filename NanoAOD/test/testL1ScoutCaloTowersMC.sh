@@ -4,7 +4,7 @@ INPUT_FILE=/store/mc/Run3Winter25Digi/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP
 
 cd $(dirname -- "${BASH_SOURCE[0]}")
 
-JOB_LABEL=testL1ScoutCaloTowersMC
+JOB_LABEL=tmp_testL1ScoutCaloTowersMC
 
 COMMON_OPTS=" --filein ${INPUT_FILE}"
 COMMON_OPTS+=" --mc --conditions auto:phase1_2025_realistic --geometry DB:Extended"
@@ -13,7 +13,7 @@ COMMON_OPTS+=" --datatier NANOAOD --eventcontent NANOAOD"
 COMMON_OPTS+=" --nThreads 1 --nStreams 0"
 COMMON_OPTS+=" --no_exec"
 
-cmsDriver.py "${JOB_LABEL}" --process "${JOB_LABEL^^}" ${COMMON_OPTS} \
+cmsDriver.py "${JOB_LABEL}" --process TEST ${COMMON_OPTS} \
   --python_filename "${JOB_LABEL}"_cfg.py --fileout file:"${JOB_LABEL}"_out.root \
   -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMC \
   -n 10
