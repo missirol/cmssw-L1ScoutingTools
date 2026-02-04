@@ -247,9 +247,6 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
           for tmpIdx, tmpLab in enumerate(xBinLabels):
               h0.GetXaxis().SetBinLabel(tmpIdx+1, tmpLab)
 
-#      h0.GetXaxis().SetRangeUser(XMIN, XMAX)
-#      h0.GetYaxis().SetRangeUser(YMIN, YMAX)
-
        if leg:
           leg.Draw('same')
 
@@ -475,12 +472,14 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
 
         print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file))
 
-        if addLogX:
-            if not ratio:
-                canvas.SetLogx(True)
-            else:
-                pad1.SetLogx(True)
-                pad2.SetLogx(True)
+    if addLogX:
+        if ratio:
+            pad1.SetLogx(True)
+            pad2.SetLogx(True)
+        else:
+            canvas.SetLogx(True)
+
+        for output_file in outputs:
             output_file_logX = '_logX.'.join(output_file.rsplit('.', 1))
             canvas.SaveAs(output_file_logX)
             print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file_logX))
@@ -650,9 +649,9 @@ def getPlotConfig(key, keyword, inputList):
        cfg.addLogX = True
 
        cfg.autoRangeX = False
-       cfg.xMin = 10
+       cfg.xMin = 1
        cfg.xMax = 1030
-       cfg.xMinFit = 10
+       cfg.xMinFit = 1
        cfg.xMaxFit = 400
 
        cfg.yMin = 0.1
