@@ -84,12 +84,12 @@ void JetResponseAnalysisDriver::init() {
   addTH2D("nPU__vs__nCTie4", 40, 0, 120, 48, 0, 240);
 
   labelMap_jetAK4_ = {
-      {"L1EmulJet", {{"GEN", "GenJet"}}},
-      {"L1EmulJet1", {{"GEN", "GenJet"}}},
-      {"L1EmulAK4CTJet0", {{"GEN", "GenJet"}}},
-      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJet"}}},
-      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJet"}}},
-      {"L1EmulAK4CTJet1", {{"GEN", "GenJet"}}},
+      {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
   };
 
   for (auto const& selLabel : {"NoSelection"}) {
@@ -148,11 +148,11 @@ void JetResponseAnalysisDriver::analyze() {
   for (auto const& jetLabel : labelMap_jetAK4_) {
     fillHistoDataJets fhDataAK4Jets;
     fhDataAK4Jets.jetCollection = jetLabel.first;
-    fhDataAK4Jets.jetPtMin = (jetLabel.first == "GenJet") ? minAK4JetPtRef : minAK4JetPt;
+    fhDataAK4Jets.jetPtMin = utils::stringStartsWith(jetLabel.first, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
     fhDataAK4Jets.jetPtMax = (jetLabel.first == "L1EmulJet1") ? 1023.4 : -1;
     fhDataAK4Jets.jetAbsEtaMax = 5.0;
     for (auto const& jetLabelRefs : jetLabel.second) {
-      auto const jetPtMin2 = (jetLabelRefs.second == "GenJet") ? minAK4JetPtRef : minAK4JetPt;
+      auto const jetPtMin2 = utils::stringStartsWith(jetLabelRefs.second, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
       auto const jetPtMax2 = (jetLabelRefs.second == "L1EmulJet1") ? 1023.4 : -1;
       fhDataAK4Jets.matches.emplace_back(fillHistoDataJets::Match(
           jetLabelRefs.first, jetLabelRefs.second, jetPtMin2, jetPtMax2, maxAK4JetDeltaRmatchRef));

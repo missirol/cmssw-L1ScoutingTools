@@ -377,6 +377,7 @@ def getPlotLabels(key, isProfile, isEfficiency, keyword):
 
     _objLabel = ''
     if   key.startswith('GenJet_'):                    _objLabel = 'GEN Jets'
+    elif key.startswith('GenJetNoMu_'):                _objLabel = 'GEN Jets(NoMu)'
     elif key.startswith('L1EmulJet_'):                 _objLabel = 'L1TJets'
     elif key.startswith('L1EmulAK4CTJet0_'):           _objLabel = 'L1CaloTowerJets(0)'
     elif key.startswith('L1EmulAK4CTJet1_'):           _objLabel = 'L1CaloTowerJets(1)'
@@ -479,7 +480,7 @@ def getPlotLabels(key, isProfile, isEfficiency, keyword):
           elif key.endswith('_phi'): _titleX = 'MET #phi'
           elif key.endswith('_sumEt'): _titleX = 'MET Sum-E_{T} [GeV]'
           elif key.endswith('_offlineNPV'): _titleX = 'Offline N_{PV}'
-       if ('_GEN_' in key) or ('GenJets' in key):
+       if ('_GEN_' in key) or ('GenJet' in key):
           _titleX = 'GEN '+_titleX
        elif '_Offline_' in key:
           _titleX = 'Offline '+_titleX
@@ -493,7 +494,7 @@ def getPlotLabels(key, isProfile, isEfficiency, keyword):
           if key.endswith('_pt_eff'): _titleX = 'MET [GeV]'
           elif key.endswith('_phi_eff'): _titleX = 'MET #phi'
           elif key.endswith('_sumEt_eff'): _titleX = 'MET Sum-E_{T} [GeV]'
-       if ('_GEN_' in key) or ('GenJets' in key):
+       if ('_GEN_' in key) or ('GenJet' in key):
           _titleX = 'GEN '+_titleX
        elif '_Offline_' in key:
           _titleX = 'Offline '+_titleX
@@ -1672,7 +1673,7 @@ def getPlotConfig(key, keyword, inputList):
        ## Jets
        if 'L1EmulAK4CTJet0_' in key:
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'GenJet_'), Legend='GEN Jets', Color=ROOT.kBlack) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'L1EmulJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key, Legend='AK4CTJet0', Color=ROOT.kBlue)]
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'L1EmulAK4CTJet0Corr_'), Legend='AK4CTJet0Corr', Color=ROOT.kGreen+1) if idx==0 else None]

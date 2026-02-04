@@ -40,19 +40,20 @@ void JetMETPerformanceAnalysisDriver::init() {
   addTH2D("nPU__vs__nCTie4", 40, 0, 120, 48, 0, 240);
 
   labelMap_jetAK4_ = {
-      {"GenJet",
+      {"GenJet", {}},
+      {"GenJetNoMu",
        {{"L1T", "L1EmulJet"},
         {"L1T1", "L1EmulJet1"},
         {"L1CT0", "L1EmulAK4CTJet0"},
         {"L1CT0Corr", "L1EmulAK4CTJet0Corr"},
         {"L1CT0CorrA", "L1EmulAK4CTJet0CorrA"},
         {"L1CT1", "L1EmulAK4CTJet1"}}},
-      {"L1EmulJet", {{"GEN", "GenJet"}}},
-      {"L1EmulJet1", {{"GEN", "GenJet"}}},
-      {"L1EmulAK4CTJet0", {{"GEN", "GenJet"}, {"L1T", "L1EmulJet"}}},
-      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJet"}, {"L1T", "L1EmulJet"}}},
-      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJet"}, {"L1T", "L1EmulJet"}}},
-      {"L1EmulAK4CTJet1", {{"GEN", "GenJet"}, {"L1T", "L1EmulJet"}}},
+      {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+      {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
       {"Jet", {}},
   };
 
@@ -79,54 +80,6 @@ void JetMETPerformanceAnalysisDriver::init() {
       bookHistograms_Jets(selLabel, jetLabel.first, utils::mapKeys(jetLabel.second));
     }
 
-    // histograms: MET
-    for (auto const& metLabel : labelMap_MET_) {
-      bookHistograms_MET(selLabel, metLabel.first, utils::mapKeys(metLabel.second));
-    }
-
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFMET", "l1tPFMET");
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFMET", "offlinePFMET_Raw");
-    //
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFPuppiMET", "l1tPFPuppiMET");
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFPuppiMET", "offlinePFPuppiMET_Raw");
-    //
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFPuppiMETTypeOne", "l1tPFPuppiMET");
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFPuppiMETTypeOne", "offlinePFPuppiMET_Type1");
-    //
-    //    bookHistograms_METMHT(selLabel);
-  }
-
-  l1tSeeds_1Jet_ = {};
-
-  for (auto const& selLabel : l1tSeeds_1Jet_) {
-    // histograms: AK4 Jets
-    for (auto const& jetLabel : labelMap_jetAK4_) {
-      bookHistograms_Jets(selLabel, jetLabel.first, utils::mapKeys(jetLabel.second));
-    }
-  }
-
-  l1tSeeds_HT_ = {};
-
-  for (auto const& selLabel : l1tSeeds_HT_) {
-    for (auto const& jetLabel : labelMap_jetAK4_) {
-      if (jetLabel.first.find("GenJets") != std::string::npos)
-        continue;
-
-      bookHistograms_Jets(selLabel, jetLabel.first, utils::mapKeys(jetLabel.second));
-    }
-
-    //    bookHistograms_Jets_2DMaps(selLabel, "hltAK4PFJetsCorrected", "l1tSlwPFJetsCorrected");
-    //    bookHistograms_Jets_2DMaps(selLabel, "hltAK4PFJetsCorrected", "offlineAK4PFJetsCorrected");
-    //
-    //    bookHistograms_Jets_2DMaps(selLabel, "hltAK4PFPuppiJetsCorrected", "l1tSlwPFPuppiJetsCorrected");
-    //    bookHistograms_Jets_2DMaps(selLabel, "hltAK4PFPuppiJetsCorrected", "offlineAK4PFPuppiJetsCorrected");
-    //
-    //    bookHistograms_MET_2DMaps(selLabel, "hltPFPuppiHT", "l1tPFPuppiHT", true);
-  }
-
-  l1tSeeds_MET_ = {};
-
-  for (auto const& selLabel : l1tSeeds_MET_) {
     // histograms: MET
     for (auto const& metLabel : labelMap_MET_) {
       bookHistograms_MET(selLabel, metLabel.first, utils::mapKeys(metLabel.second));
@@ -269,11 +222,11 @@ void JetMETPerformanceAnalysisDriver::analyze() {
   for (auto const& jetLabel : labelMap_jetAK4_) {
     fillHistoDataJets fhDataAK4Jets;
     fhDataAK4Jets.jetCollection = jetLabel.first;
-    fhDataAK4Jets.jetPtMin = (jetLabel.first == "GenJet") ? minAK4JetPtRef : minAK4JetPt;
+    fhDataAK4Jets.jetPtMin = utils::stringStartsWith(jetLabel.first, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
     fhDataAK4Jets.jetPtMax = (jetLabel.first == "L1EmulJet1") ? 1023.4 : -1;
     fhDataAK4Jets.jetAbsEtaMax = 5.0;
     for (auto const& jetLabelRefs : jetLabel.second) {
-      auto const jetPtMin2 = (jetLabelRefs.second == "GenJet") ? minAK4JetPtRef : minAK4JetPt;
+      auto const jetPtMin2 = utils::stringStartsWith(jetLabelRefs.second, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
       auto const jetPtMax2 = (jetLabelRefs.second == "L1EmulJet1") ? 1023.4 : -1;
       fhDataAK4Jets.matches.emplace_back(fillHistoDataJets::Match(
           jetLabelRefs.first, jetLabelRefs.second, jetPtMin2, jetPtMax2, maxAK4JetDeltaRmatchRef));
@@ -354,7 +307,7 @@ void JetMETPerformanceAnalysisDriver::analyze() {
   //  const float maxAK8JetDeltaRmatchRef(0.2);
   //
   //  for(auto const& jetLabel : labelMap_jetAK8_){
-  //    auto const isGENJets = (jetLabel.first.find("GenJets") != std::string::npos);
+  //    auto const isGENJets = (jetLabel.first.find("GenJet") != std::string::npos);
   //
   //    auto const jetPt1 = isGENJets ? minAK8JetPtRef : minAK8JetPt;
   //    auto const jetPt2 = isGENJets ? minAK8JetPtRef * 0.75 : minAK8JetPtRef;

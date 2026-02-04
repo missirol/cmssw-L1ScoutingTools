@@ -498,6 +498,8 @@ def getPlotLabels(key, keyword):
     _jetLabel = ''
     if key.startswith('GenJet_'):
         _jetLabel = 'GEN Jets'
+    elif key.startswith('GenJetNoMu_'):
+        _jetLabel = 'GEN Jets(NoMu)'
     elif key.startswith('L1EmulJet_'):
         _jetLabel = 'L1T Jets'
     elif key.startswith('L1EmulJet1_'):
@@ -532,7 +534,7 @@ def getPlotLabels(key, keyword):
     elif key.endswith('_eta'): _titleX = 'Jet #eta'
     elif key.endswith('_phi'): _titleX = 'Jet #phi'
 
-    if ('_GEN_' in key) or ('GenJets' in key):
+    if ('_GEN_' in key) or ('GenJet' in key):
        _titleX = 'GEN '+_titleX
 
     if '_pt_overGEN_Mean_' in key: _titleY = '<p_{T} / p_{T}^{GEN}>'
