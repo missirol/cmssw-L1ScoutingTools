@@ -26,8 +26,6 @@ void JetMETPerformanceAnalysisDriver::init() {
       "_HB",       //"_HBPt0",      "_HBPt1",      "_HBPt2",      "_HBPt3",      "_HBPt4",      "_HBPt5",
       "_HE",       //"_HEPt0",      "_HEPt1",      "_HEPt2",      "_HEPt3",      "_HEPt4",      "_HEPt5",
       "_HF",       //"_HFPt0",      "_HFPt1",      "_HFPt2",      "_HFPt3",      "_HFPt4",      "_HFPt5",
-
-      "_HBTest0",
   };
 
   // histogram: events counter
@@ -149,9 +147,6 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
     ret = (jetAbsEta < 1.3) and (400. <= jetPt) and (jetPt < 1023.4);
   } else if (categLabel == "_HBPt5") {
     ret = (jetAbsEta < 1.3) and (1023.4 <= jetPt);
-
-  } else if (categLabel == "_HBTest0") {
-    ret = (jetAbsEta < 0.2) and (20 <= nCTie4) and (nCTie4 < 30);
   }
 
   else if (categLabel == "_HE") {
