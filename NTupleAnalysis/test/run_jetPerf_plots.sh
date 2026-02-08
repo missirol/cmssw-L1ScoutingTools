@@ -13,7 +13,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 inpdir=${L1SADIR}/out2_jetPerf
-outdir=plots_jetPerf
+outdir=out2_jetPerf_plots_tmp
 
 samples=(
   Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120
