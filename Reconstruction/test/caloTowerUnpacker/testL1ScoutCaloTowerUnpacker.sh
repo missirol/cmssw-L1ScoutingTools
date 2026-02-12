@@ -28,7 +28,7 @@ cmsRun "${JOB_LABEL}"_step1_cfg_dump.py \
 
 # Step 2:
 #  convert the CaloTower-related branches to FRD files
-"${TEST_DIR}"/convertL1NanoToL1ScoutCaloTowerFRD.py \
+"${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_convertToFRD.py \
   -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 3 \
   2>&1 | tee "${JOB_LABEL}"_step2.log
 
