@@ -51,7 +51,7 @@ L1CT = awkward.zip({
     "ehrBits"  : events[f"{args.caloTowerLabel}_iratio"]
 })
 
-L1CT = L1CT[numpy.abs(L1CT.hwEta * 0.087) < 2.5]
+#L1CT = L1CT[numpy.abs(L1CT.hwEta * 0.087) < 2.5]
 L1CT = awkward.values_astype(L1CT, numpy.int64)
 
 def encode_ct(ct, enc=False):
@@ -66,8 +66,8 @@ def encode_ct(ct, enc=False):
     w32b += (ct.hwPt         <<  0) & 0x000001ff
     w32b += (ct.ehrBits      <<  9) & 0x00000e00
     w32b += (ct.miscBits     << 12) & 0x0000f000
-    w32b += (c2(ct.hwEta, 8) << 16) & 0x00ff0000
-    w32b += (ct.hwPhi        << 24) & 0xff000000
+    w32b += (ct.hwPhi        << 16) & 0x00ff0000
+    w32b += (c2(ct.hwEta, 8) << 24) & 0xff000000
 
     if enc:
         return struct.pack('I', w32b)
@@ -79,8 +79,8 @@ def decode_ct(word):
         "hwPt": word & 0x000001ff,
         "ehrBits": (word & 0x00000e00) >> 9,
         "miscBits": (word & 0x0000f000) >> 12,
-        "hwEta": (word & 0x00ff0000) >> 16,
-        "hwPhi": (word & 0xff000000) >> 24,
+        "hwPhi": (word & 0x00ff0000) >> 16,
+        "hwEta": (word & 0xff000000) >> 24,
     }
     return ct
 
@@ -102,8 +102,8 @@ def encode_ct_ak(ct, enc=False):
     w32b = w32b + ((ct.hwPt            <<  0) & 0x000001ff)
     w32b = w32b + ((ct.ehrBits         <<  9) & 0x00000e00)
     w32b = w32b + ((ct.miscBits        << 12) & 0x0000f000)
-    w32b = w32b + ((c2_ak(ct.hwEta, 8) << 16) & 0x00ff0000)
-    w32b = w32b + ((ct.hwPhi           << 24) & 0xff000000)
+    w32b = w32b + ((ct.hwPhi           << 16) & 0x00ff0000)
+    w32b = w32b + ((c2_ak(ct.hwEta, 8) << 24) & 0xff000000)
 
     return numpy.array(w32b, dtype='uint32').tobytes()
 
