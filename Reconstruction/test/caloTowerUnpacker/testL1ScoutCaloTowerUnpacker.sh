@@ -38,5 +38,4 @@ rm -rf "${JOB_LABEL}"_cfg.py
 cmsRun "${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_cfg.py \
   -r "${RUN_NUMBER}" -o "${JOB_LABEL}"_out2.root
 
-rm -rf __pycache__
-rm -rf tmp
+rm -rf __pycache__ run"{RUN_NUMBER}" tmp
