@@ -1,15 +1,14 @@
 #!/bin/bash -ex
 
-# Step 1:
-#  create a NanoAOD file (using the "L1DPG"-Nano flavour to include CaloTower-related information)
-INPUT_FILE=/store/data/Run2025G/ZeroBias/RAW/v1/000/398/903/00000/e74e0798-0eb4-470f-b5d3-5d4fe0b3efbe.root
-RUN_NUMBER=398903
+JOB_LABEL=tmp_testL1ScoutCaloTowerUnpacker
 
 TEST_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
-JOB_LABEL=tmp_testL1ScoutCaloTowerUnpacker
+RUN_NUMBER=398183
 
-COMMON_OPTS=" --filein ${INPUT_FILE}"
+# Step 1:
+#  create a NanoAOD file (using the "L1DPG"-Nano flavour to include CaloTower-related information)
+COMMON_OPTS=" --filein /store/data/Run2025G/ZeroBias/RAW/v1/000/398/183/00000/516d3935-3ffd-46b5-942d-59c83c137710.root"
 COMMON_OPTS+=" --data --conditions 160X_dataRun3_HLT_v1 --geometry DB:Extended"
 COMMON_OPTS+=" --scenario pp --era Run3_2025"
 COMMON_OPTS+=" --datatier NANOAOD --eventcontent NANOAOD"
@@ -29,12 +28,13 @@ cmsRun "${JOB_LABEL}"_step1_cfg_dump.py \
 # Step 2:
 #  convert the CaloTower-related branches to FRD files
 "${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_convertToFRD.py \
-  -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 3 \
+  -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 5 \
   2>&1 | tee "${JOB_LABEL}"_step2.log
 
 # Step 3:
 #  process FRD files, unpacking the CaloTowers and
 #  running jet-clustering on them using FastJet
+LD_PRELOAD=libPerfToolsAllocMonitorPreload.so:libPerfToolsMaxMemoryPreload.so \
 cmsRun "${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_cfg.py \
   -r "${RUN_NUMBER}" -o "${JOB_LABEL}"_step3_out.root \
   2>&1 | tee "${JOB_LABEL}"_step3.log

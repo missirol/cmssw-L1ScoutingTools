@@ -93,10 +93,10 @@ if __name__ == '__main__':
     nOrbits2, nBXs2 = 0, 0
     for event in tree2:
         nOrbits2 += 1
-        bxs = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowerUnpacker_CaloTower_SCPU.getFilledBxs()
+        bxs = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowers_CaloTower_SCPU.getFilledBxs()
         nBXs2 += len(bxs)
         for bx in bxs:
-            nCaloTowers2 = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowerUnpacker_CaloTower_SCPU.getBxSize(bx)
+            nCaloTowers2 = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowers_CaloTower_SCPU.getBxSize(bx)
 
             if file2_print is not None or verbosity_lv1:
                 event_str = f'  Orbit {nOrbits2}, BX {bx} ({nCaloTowers2} CaloTowers)'
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                     print(f'\n{event_str}')
 
             for idx in range(nCaloTowers2):
-                obj = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowerUnpacker_CaloTower_SCPU.getBxObject(bx, idx)
+                obj = event.l1ScoutingRun3CaloTowerOrbitCollection_l1sCaloTowers_CaloTower_SCPU.getBxObject(bx, idx)
                 hwEt = obj.hwEt()
                 hwEta = obj.hwEta()
                 hwPhi = obj.hwPhi()

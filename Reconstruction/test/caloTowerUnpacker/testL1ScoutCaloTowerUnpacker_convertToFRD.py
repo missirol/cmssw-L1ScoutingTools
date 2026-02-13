@@ -151,21 +151,19 @@ fout.write(bytes(32))
 izb = 0
 fsize = 32
 for i in range(1, num_orbits + 1):
-
     nbxs = 0
     orbitdata = bytes()
     for j in collBXs:
         # consider only 2 timeslices
         if (j%9 != 0 ) and (j%9 != 1):
             continue
-
         orbitdata += encode_bx_ak(j, i, L1CT[izb])
         izb += 1
         if izb == len(L1CT):
             izb = 0 # roll over
 
     if i%patience == 0:
-        print(f"At orbit {i} (size = {len(orbitdata)/2**20:1.3f}MB)")
+        print(f"At orbit {i} (size = {len(orbitdata)/2**20:1.3f} MB)")
 
     eh_raw  = bytes()
     eh_raw += struct.pack('H', eh_version)
