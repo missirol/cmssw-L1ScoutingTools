@@ -9,7 +9,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
-#include "L1TriggerScouting/Utilities/interface/conversion.h"
+#include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 
 #include "fastjet/ClusterSequence.hh"
 #include "fastjet/JetDefinition.hh"
@@ -63,11 +63,9 @@ void L1TCaloTowerAKJetProducer::produce(edm::StreamID, edm::Event& iEvent, edm::
       auto const& input = inputs.at(bx, idx);
       if ((towerMinHwPt_ < 0 or input.hwPt() >= towerMinHwPt_) and
           (towerMaxHwPt_ < 0 or input.hwPt() <= towerMaxHwPt_)) {
-        l1t::Jet::PolarLorentzVector const p4{l1ScoutingRun3::calol2::fEt(input.hwPt()),
-                                              l1ScoutingRun3::calol2::fEta(input.hwEta()),
-                                              l1ScoutingRun3::calol2::fPhi(input.hwPhi()),
-                                              0};
-        fjInputs.emplace_back(p4.px(), p4.py(), p4.pz(), p4.energy());
+        auto const mpEta = l1t::CaloTools::mpEta(input.hwEta());
+        auto const ctP4 = l1t::CaloTools::p4MP(input.hwPt(), mpEta, input.hwPhi());
+        fjInputs.emplace_back(ctP4.px(), ctP4.py(), ctP4.pz(), ctP4.energy());
       }
     }
 
