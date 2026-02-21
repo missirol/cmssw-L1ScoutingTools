@@ -104,7 +104,7 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   if (categLabel == "_EtaIncl") {
     ret = (jetAbsEta < 5.0);
   } else if (categLabel == "_EtaInclPt0") {
-    ret = (jetAbsEta < 5.0) and (30. <= jetPt) and (jetPt < 60.);
+    ret = (jetAbsEta < 5.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_EtaInclPt1") {
     ret = (jetAbsEta < 5.0) and (60. <= jetPt) and (jetPt < 110.);
   } else if (categLabel == "_EtaInclPt2") {
@@ -120,7 +120,7 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   else if (categLabel == "_Eta2p5") {
     ret = (jetAbsEta < 2.5);
   } else if (categLabel == "_Eta2p5Pt0") {
-    ret = (jetAbsEta < 2.5) and (30. <= jetPt) and (jetPt < 60.);
+    ret = (jetAbsEta < 2.5) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_Eta2p5Pt1") {
     ret = (jetAbsEta < 2.5) and (60. <= jetPt) and (jetPt < 110.);
   } else if (categLabel == "_Eta2p5Pt2") {
@@ -136,7 +136,7 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   else if (categLabel == "_HB") {
     ret = (jetAbsEta < 1.3);
   } else if (categLabel == "_HBPt0") {
-    ret = (jetAbsEta < 1.3) and (30. <= jetPt) and (jetPt < 60.);
+    ret = (jetAbsEta < 1.3) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HBPt1") {
     ret = (jetAbsEta < 1.3) and (60. <= jetPt) and (jetPt < 110.);
   } else if (categLabel == "_HBPt2") {
@@ -152,7 +152,7 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   else if (categLabel == "_HE") {
     ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0);
   } else if (categLabel == "_HEPt0") {
-    ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (30. <= jetPt) and (jetPt < 60.);
+    ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HEPt1") {
     ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (60. <= jetPt) and (jetPt < 110.);
   } else if (categLabel == "_HEPt2") {
@@ -168,7 +168,7 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   else if (categLabel == "_HF") {
     ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0);
   } else if (categLabel == "_HFPt0") {
-    ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (30. <= jetPt) and (jetPt < 60.);
+    ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HFPt1") {
     ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (60. <= jetPt) and (jetPt < 110.);
   } else if (categLabel == "_HFPt2") {
@@ -209,7 +209,7 @@ void JetMETPerformanceAnalysisDriver::analyze() {
   H2("nPU__vs__nCTie4")->Fill(nPU, nCTie4, wgt);
 
   //// AK4 Jets
-  const float minAK4JetPt{30};
+  const float minAK4JetPt{20};
   const float minAK4JetPtRef{7.5};
   const float maxAK4JetDeltaRmatchRef{0.2};
 
@@ -403,9 +403,17 @@ void JetMETPerformanceAnalysisDriver::bookHistograms_Jets(const std::string& dir
     binEdges_MHT.at(idx) = idx * 10.;
   }
 
-  std::vector<float> binEdges_pt(104);
+  std::vector<float> binEdges_pt(131);
   for (uint idx = 0; idx < binEdges_pt.size(); ++idx) {
-    binEdges_pt.at(idx) = std::max(1.f, 10.f * idx);
+    if (idx == 0) {
+      binEdges_pt[idx] = 1.f;
+    } else if (idx < 51) {
+      binEdges_pt[idx] = idx * 10.f;
+    } else if (idx < 101) {
+      binEdges_pt[idx] = 500.f + (idx - 50) * 20.f;
+    } else {
+      binEdges_pt[idx] = 1500.f + (idx - 100) * 50.f;
+    }
   }
 
   std::vector<float> binEdges_eta(101);

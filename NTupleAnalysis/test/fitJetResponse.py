@@ -513,30 +513,43 @@ def getPlotLabels(key, keyword):
         _jetLabel = 'Uncorrected AK4 L1CaloTowerJets (no E-saturated towers)'
 
     _selLabel = ''
-    sel_match = re.match('.*_absEta(\w+)to(\w+)nCTie4(\w+)to(\w+?)_.*', key)
+    sel_match = re.match('.*_eta(\+|-)(\w+)to(\+|-)(\w+)nCTie4(\d+)to(\d+?|Inf)_.*', key)
     if sel_match:
-        _selLabel += f'{sel_match.group(1).replace("p", ".")}'
-        _selLabel += ' <= |#eta_{jet}| < '
+        _selLabel += f'{sel_match.group(1)}'
         _selLabel += f'{sel_match.group(2).replace("p", ".")}'
+        _selLabel += ' <= |#eta_{jet}| < '
+        _selLabel += f'{sel_match.group(3)}'
+        _selLabel += f'{sel_match.group(4).replace("p", ".")}'
         _selLabel += ', '
-        if sel_match.group(4) == 'Inf':
+        if sel_match.group(6) == 'Inf':
             _selLabel += 'N_{CTie4} >= '
-            _selLabel += f'{int(sel_match.group(3))}'
+            _selLabel += f'{int(sel_match.group(5))}'
         else:
-            _selLabel += f'{int(sel_match.group(3))}'
+            _selLabel += f'{int(sel_match.group(5))}'
             _selLabel += ' <= N_{CTie4} < '
-            _selLabel += f'{int(sel_match.group(4))}'
+            _selLabel += f'{int(sel_match.group(6))}'
 
     ## titles of axes
     _titleX, _titleY = key, ''
-    if key.endswith('_pt'): _titleX = 'Jet p_{T} [GeV]'
+    if key.endswith('_E'): _titleX = 'Jet energy [GeV]'
+    elif key.endswith('_pt'): _titleX = 'Jet p_{T} [GeV]'
     elif key.endswith('_eta'): _titleX = 'Jet #eta'
     elif key.endswith('_phi'): _titleX = 'Jet #phi'
 
     if ('_GEN_' in key) or ('GenJet' in key):
        _titleX = 'GEN '+_titleX
 
-    if '_pt_overGEN_Mean_' in key: _titleY = '<p_{T} / p_{T}^{GEN}>'
+    if '_E_overGEN_Mean_' in key: _titleY = '<E / E^{GEN}>'
+    elif '_E_overGEN_RMSOverMean_' in key: _titleY = '#sigma(E / E^{GEN}) / <E / E^{GEN}>'
+    elif '_E_overGEN_Median_' in key: _titleY = 'Median(E / E^{GEN})'
+    elif '_E_overGEN_RMSOverMedian_' in key: _titleY = '#sigma(E / E^{GEN}) / Median(E / E^{GEN})'
+    elif '_E_overGEN_RMS_' in key: _titleY = '#sigma(E / E^{GEN})'
+    elif '_E_GENoverREC_Mean_' in key: _titleY = '<E^{GEN} / E>'
+    elif '_E_GENoverREC_RMSOverMean_' in key: _titleY = '#sigma(E^{GEN} / E) / <E^{GEN} / E>'
+    elif '_E_GENoverREC_Median_' in key: _titleY = 'Median(E^{GEN} / E)'
+    elif '_E_GENoverREC_RMSOverMedian_' in key: _titleY = '#sigma(E^{GEN} / E) / Median(E^{GEN} / E)'
+    elif '_E_GENoverREC_RMS_' in key: _titleY = '#sigma(E^{GEN} / E)'
+    elif '_pt_overGEN_Mean_' in key: _titleY = '<p_{T} / p_{T}^{GEN}>'
     elif '_pt_overGEN_RMSOverMean_' in key: _titleY = '#sigma(p_{T} / p_{T}^{GEN}) / <p_{T} / p_{T}^{GEN}>'
     elif '_pt_overGEN_Median_' in key: _titleY = 'Median(p_{T} / p_{T}^{GEN})'
     elif '_pt_overGEN_RMSOverMedian_' in key: _titleY = '#sigma(p_{T} / p_{T}^{GEN}) / Median(p_{T} / p_{T}^{GEN})'
@@ -547,7 +560,10 @@ def getPlotLabels(key, keyword):
     elif '_pt_GENoverREC_RMSOverMedian_' in key: _titleY = '#sigma(p_{T}^{GEN} / p_{T}) / Median(p_{T}^{GEN} / p_{T})'
     elif '_pt_GENoverREC_RMS_' in key: _titleY = '#sigma(p_{T}^{GEN} / p_{T})'
     else:
-      if key.endswith('_pt_overGEN'): _titleX = 'p_{T} / p_{T}^{GEN}'
+      if key.endswith('_E_overGEN'): _titleX = 'E / E^{GEN}'
+      elif key.endswith('_E_GENoverREC'): _titleX = 'E^{GEN} / E'
+      elif key.endswith('_E'): _titleX = 'Jet energy [GeV]'
+      elif key.endswith('_pt_overGEN'): _titleX = 'p_{T} / p_{T}^{GEN}'
       elif key.endswith('_pt_GENoverREC'): _titleX = 'p_{T}^{GEN} / p_{T}'
       elif key.endswith('_pt'): _titleX = 'Jet p_{T} [GeV]'
       elif key.endswith('_eta'): _titleX = 'Jet #eta'
@@ -650,16 +666,16 @@ def getPlotConfig(key, keyword, inputList):
 
        cfg.autoRangeX = False
        cfg.xMin = 1
-       cfg.xMax = 1030
+       cfg.xMax = 3000
        cfg.xMinFit = 1
        cfg.xMaxFit = 400
 
-       cfg.yMin = 0.1
+       cfg.yMin = -1.1
        cfg.yMax = 4.4
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
 
-       cfg.doFit = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
+       cfg.doFit = False #key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
        cfg.ratio = cfg.doFit
 
        hcolor = ROOT.kBlack
@@ -837,11 +853,13 @@ if __name__ == '__main__':
            jec_str += f'{_plotConfig.xMinFit: 5.1f} '
            jec_str += f'{_plotConfig.xMaxFit: 5.1f} '
 
-           sel_match = re.match('.*_absEta(\w+)to(\w+)nCTie4(\w+)to(\w+?)_.*', key_basename)
-           jec_str += f'{float(sel_match.group(1).replace("p", ".")): 5.3f} '
+           sel_match = re.match('.*_eta(\+|-)(\w+)to(\+|-)(\w+)nCTie4(\d+)to(\d+?|Inf)_.*', key_basename)
+           jec_str += f'{sel_match.group(1)}'
            jec_str += f'{float(sel_match.group(2).replace("p", ".")): 5.3f} '
-           jec_str += f'{int(sel_match.group(3)): 4d} '
-           jec_val4 = -1 if sel_match.group(4) == 'Inf' else int(sel_match.group(4))
+           jec_str += f'{sel_match.group(3)}'
+           jec_str += f'{float(sel_match.group(4).replace("p", ".")): 5.3f} '
+           jec_str += f'{int(sel_match.group(5)): 4d} '
+           jec_val4 = -1 if sel_match.group(6) == 'Inf' else int(sel_match.group(6))
            jec_str += f'{jec_val4: 4d} '
 
            jec_str += f'{fitf.GetFormula().GetTitle():>50} '

@@ -52,6 +52,8 @@ public:
   T const& value(const std::string& key) const;
 
   template <class T>
+  TTreeReaderArray<T> const* array_ptr(const std::string& key) const;
+  template <class T>
   TTreeReaderArray<T> const& array(const std::string& key) const;
 
   template <class T>
@@ -103,9 +105,9 @@ T const* AnalysisDriverBase::value_ptr(const std::string& key) const {
     return nullptr;
   }
 
-  auto* ptr(dynamic_cast<TTreeReaderValue<T>*>(map_TTreeReaderValues_.at(key).get()));
+  auto* ptr = dynamic_cast<TTreeReaderValue<T>*>(map_TTreeReaderValues_.at(key).get());
 
-  if (not ptr) {
+  if (ptr == nullptr) {
     return nullptr;
   }
 
@@ -114,12 +116,16 @@ T const* AnalysisDriverBase::value_ptr(const std::string& key) const {
 
 template <class T>
 T const& AnalysisDriverBase::value(const std::string& key) const {
-  auto const* ptr(value_ptr<T>(key));
+  auto const* ptr = value_ptr<T>(key);
 
-  if (not ptr) {
+  if (ptr == nullptr) {
     std::ostringstream ss_str;
-    ss_str << "value -- dynamic_cast to \"TTreeReaderValue<" << typeid(T).name() << ">*\" failed for key \"" << key
-           << "\".";
+    if (not hasTTreeReaderValue(key)) {
+      ss_str << "value -- no branch named \"" << key << "\".";
+    } else {
+      ss_str << "value -- dynamic_cast to \"TTreeReaderValue<"
+             << typeid(T).name() << ">*\" failed for key \"" << key << "\".";
+    }
     throw std::runtime_error(ss_str.str());
   }
 
@@ -127,19 +133,32 @@ T const& AnalysisDriverBase::value(const std::string& key) const {
 }
 
 template <class T>
-TTreeReaderArray<T> const& AnalysisDriverBase::array(const std::string& key) const {
+TTreeReaderArray<T> const* AnalysisDriverBase::array_ptr(const std::string& key) const {
   if (not hasTTreeReaderValue(key)) {
-    std::ostringstream ss_str;
-    ss_str << "array -- no branch named \"" << key << "\".";
-    throw std::runtime_error(ss_str.str());
+    return nullptr;
   }
 
   auto* ptr = dynamic_cast<TTreeReaderArray<T>*>(map_TTreeReaderValues_.at(key).get());
 
   if (ptr == nullptr) {
+    return nullptr;
+  }
+
+  return ptr;
+}
+
+template <class T>
+TTreeReaderArray<T> const& AnalysisDriverBase::array(const std::string& key) const {
+  auto const* ptr = array_ptr<T>(key);
+
+  if (ptr == nullptr) {
     std::ostringstream ss_str;
-    ss_str << "array -- dynamic_cast to \"TTreeReaderArray<" << typeid(T).name() << ">*\" failed for key \"" << key
-           << "\".";
+    if (not hasTTreeReaderValue(key)) {
+      ss_str << "array -- no branch named \"" << key << "\".";
+    } else {
+      ss_str << "array -- dynamic_cast to \"TTreeReaderValue<"
+             << typeid(T).name() << ">*\" failed for key \"" << key << "\".";
+    }
     throw std::runtime_error(ss_str.str());
   }
 
@@ -152,9 +171,9 @@ std::vector<T> const* AnalysisDriverBase::vector_ptr(const std::string& key) con
     return nullptr;
   }
 
-  auto* ptr(dynamic_cast<TTreeReaderValue<std::vector<T>>*>(map_TTreeReaderValues_.at(key).get()));
+  auto* ptr = dynamic_cast<TTreeReaderValue<std::vector<T>>*>(map_TTreeReaderValues_.at(key).get());
 
-  if (not ptr) {
+  if (ptr == nullptr) {
     return nullptr;
   }
 
@@ -163,12 +182,16 @@ std::vector<T> const* AnalysisDriverBase::vector_ptr(const std::string& key) con
 
 template <class T>
 std::vector<T> const& AnalysisDriverBase::vector(const std::string& key) const {
-  auto const* ptr(vector_ptr<T>(key));
+  auto const* ptr = vector_ptr<T>(key);
 
-  if (not ptr) {
+  if (ptr == nullptr) {
     std::ostringstream ss_str;
-    ss_str << "vector -- dynamic_cast to \"TTreeReaderValue<std::vector<" << typeid(T).name()
-           << ">>*\" failed for key \"" << key << "\".";
+    if (not hasTTreeReaderValue(key)) {
+      ss_str << "vector -- no branch named \"" << key << "\".";
+    } else {
+      ss_str << "vector -- dynamic_cast to \"TTreeReaderValue<std::vector<"
+             << typeid(T).name() << ">>*\" failed for key \"" << key << "\".";
+    }
     throw std::runtime_error(ss_str.str());
   }
 

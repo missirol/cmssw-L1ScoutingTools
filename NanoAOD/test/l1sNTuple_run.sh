@@ -6,7 +6,7 @@ if [ $# -lt 1 ]; then
 fi
 
 # number of events per sample
-NEVT=1000000
+NEVT=5000000
 
 if [ $# -eq 1 ]; then
   ODIR=${1}

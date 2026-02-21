@@ -12,7 +12,7 @@ void JetResponseAnalysisDriver::init() {
 
   auto f_to_str = [](float a) -> std::string {
     std::ostringstream oss;
-    oss << std::fixed << std::setprecision(1) << a;
+    oss << std::fixed << std::setprecision(1) << std::showpos << a;
     auto ret = oss.str();
     std::replace(ret.begin(), ret.end(), '.', 'p');
     return ret;
@@ -25,20 +25,29 @@ void JetResponseAnalysisDriver::init() {
     return ret;
   };
 
-  std::vector<float> const absEta_v = {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f, 1.6f, 1.9f, 2.2f, 2.5f};
+  std::vector<float> eta_v = {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f, 1.6f, 1.9f, 2.2f, 2.5f, 3.0f, 4.0f, 5.0f};
+  {
+    auto const eta_v_size0{eta_v.size()};
+    for (auto idx = 1u; idx < eta_v_size0; ++idx) {
+      auto const idx_offset{eta_v.size() - eta_v_size0};
+      eta_v.insert(eta_v.begin(), -1 * eta_v[idx + idx_offset]);
+    }
+  }
 
-  for (auto ai = 0u; (ai + 1) < absEta_v.size(); ++ai) {
-    auto const a0 = absEta_v[ai];
-    auto const a1 = absEta_v[ai + 1];
+  for (auto ai = 0u; (ai + 1) < eta_v.size(); ++ai) {
+    auto const a0 = eta_v[ai];
+    auto const a1 = eta_v[ai + 1];
+
+    auto const absMin = std::min(std::abs(a0), std::abs(a1));
 
     std::vector<unsigned int> nCTie4_v{};
-    if (a0 < 0.4f) {
+    if (absMin < 0.4f) {
       nCTie4_v = {0, 20, 30, 40, 60, 80};
-    } else if (a0 == 1.6f) {
+    } else if (absMin == 1.6f) {
       nCTie4_v = {0, 10, 20, 30, 40, 60};
-    } else if (a0 == 1.9f) {
+    } else if (absMin == 1.9f) {
       nCTie4_v = {0, 10, 20, 30, 40, 60};
-    } else if (a0 == 2.2f) {
+    } else if (absMin == 2.2f) {
       nCTie4_v = {0, 10};
     } else {
       nCTie4_v = {0, 10, 20, 30, 40, 60, 80};
@@ -47,15 +56,15 @@ void JetResponseAnalysisDriver::init() {
     for (auto bi = 0u; bi < nCTie4_v.size(); ++bi) {
       auto const b0 = nCTie4_v[bi];
 
-      std::string key{"_absEta"};
+      std::string key{"_eta"};
       key += f_to_str(a0);
-      assert(key.size() == 10);
+      assert(key.size() == 8);
 
       key += "to" + f_to_str(a1);
-      assert(key.size() == 15);
+      assert(key.size() == 14);
 
       key += "nCTie4" + u_to_str(b0) + "to";
-      assert(key.size() == 26);
+      assert(key.size() == 25);
 
       if ((bi + 1) == nCTie4_v.size()) {
         key += "Inf";
@@ -70,7 +79,7 @@ void JetResponseAnalysisDriver::init() {
         };
       }
 
-      assert(key.size() == 29);
+      assert(key.size() == 28);
     }
   }
 
@@ -173,14 +182,29 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
     dirPrefix += "/";
   }
 
-  std::vector<float> binEdges_pt(104);
+  std::vector<float> binEdges_pt(131);
   for (uint idx = 0; idx < binEdges_pt.size(); ++idx) {
-    binEdges_pt.at(idx) = std::max(1.f, 10.f * idx);
+    if (idx == 0) {
+      binEdges_pt[idx] = 1.f;
+    } else if (idx < 51) {
+      binEdges_pt[idx] = idx * 10.f;
+    } else if (idx < 101) {
+      binEdges_pt[idx] = 500.f + (idx - 50) * 20.f;
+    } else {
+      binEdges_pt[idx] = 1500.f + (idx - 100) * 50.f;
+    }
   }
+
+  std::vector<float> const binEdges_E{binEdges_pt};
 
   std::vector<float> binEdges_eta(101);
   for (uint idx = 0; idx < binEdges_eta.size(); ++idx) {
     binEdges_eta.at(idx) = -5.0 + 0.1 * idx;
+  }
+
+  std::vector<float> binEdges_phi(41);
+  for (uint idx = 0; idx < binEdges_phi.size(); ++idx) {
+    binEdges_phi.at(idx) = M_PI * (0.05 * idx - 1.);
   }
 
   std::vector<float> binEdges_response(101);
@@ -220,7 +244,26 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
                   matchLabel + "_pt",
               binEdges_response,
               binEdges_pt);
+
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__E",
+              binEdges_response,
+              binEdges_E);
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__" +
+                  matchLabel + "_E",
+              binEdges_response,
+              binEdges_E);
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_" + matchLabel + "overREC__vs__E",
+              binEdges_response,
+              binEdges_E);
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_" + matchLabel + "overREC__vs__" +
+                  matchLabel + "_E",
+              binEdges_response,
+              binEdges_E);
+
+      addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E", binEdges_E);
+      addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt", binEdges_pt);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_eta", binEdges_eta);
+      addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_phi", binEdges_phi);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_nCT", binEdges_nCT);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_nCTie4", binEdges_nCTie4);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_nPU", binEdges_nPU);
@@ -265,10 +308,12 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
 
   auto const v_pt_size = this->value<int>("n" + jetCollBranchName);
 
+  std::vector<float> v_E{};
   std::vector<float> v_pt{};
   std::vector<float> v_eta{};
   std::vector<float> v_phi{};
 
+  v_E.reserve(v_pt_size);
   v_pt.reserve(v_pt_size);
   v_eta.reserve(v_pt_size);
   v_phi.reserve(v_pt_size);
@@ -276,6 +321,7 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
   auto const& a_pt = this->array<float>(jetCollBranchName + "_pt");
   auto const& a_eta = this->array<float>(jetCollBranchName + "_eta");
   auto const& a_phi = this->array<float>(jetCollBranchName + "_phi");
+  auto const* a_mass = this->array_ptr<float>(jetCollBranchName + "_mass");
 
   for (auto idx = 0; idx < v_pt_size; ++idx) {
     float corr = 1;
@@ -283,7 +329,9 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
       corr = jecA_.correction(a_pt[idx], a_eta[idx]);
     }
 
-    v_pt.emplace_back(a_pt[idx] * corr);
+    auto const a_mass_val = a_mass ? (*a_mass)[idx] : 0.f;
+    v_E.emplace_back(corr * std::sqrt(std::pow(a_pt[idx] * std::cosh(a_eta[idx]), 2) + std::pow(a_mass_val, 2)));
+    v_pt.emplace_back(corr * a_pt[idx]);
     v_eta.emplace_back(a_eta[idx]);
     v_phi.emplace_back(a_phi[idx]);
   }
@@ -321,10 +369,12 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
 
     auto const v_match_pt_size = this->value<int>("n" + matchJetCollBranchName);
 
+    std::vector<float> v_match_E{};
     std::vector<float> v_match_pt{};
     std::vector<float> v_match_eta{};
     std::vector<float> v_match_phi{};
 
+    v_match_E.reserve(v_match_pt_size);
     v_match_pt.reserve(v_match_pt_size);
     v_match_eta.reserve(v_match_pt_size);
     v_match_phi.reserve(v_match_pt_size);
@@ -332,6 +382,7 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
     auto const& a_match_pt = this->array<float>(matchJetCollBranchName + "_pt");
     auto const& a_match_eta = this->array<float>(matchJetCollBranchName + "_eta");
     auto const& a_match_phi = this->array<float>(matchJetCollBranchName + "_phi");
+    auto const* a_match_mass = this->array_ptr<float>(matchJetCollBranchName + "_mass");
 
     for (auto idx = 0; idx < v_match_pt_size; ++idx) {
       float corr{1.f};
@@ -339,7 +390,9 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
         corr = jecA_.correction(a_match_pt[idx], a_match_eta[idx]);
       }
 
-      v_match_pt.emplace_back(a_match_pt[idx] * corr);
+      auto const a_match_mass_val = a_match_mass ? (*a_match_mass)[idx] : 0.f;
+      v_match_E.emplace_back(corr * std::sqrt(std::pow(a_match_pt[idx] * std::cosh(a_match_eta[idx]), 2) + std::pow(a_match_mass_val, 2)));
+      v_match_pt.emplace_back(corr * a_match_pt[idx]);
       v_match_eta.emplace_back(a_match_eta[idx]);
       v_match_phi.emplace_back(a_match_phi[idx]);
     }
@@ -376,7 +429,7 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
       std::vector<size_t> jetIndices;
       jetIndices.reserve(fhDataIndices.size());
       for (auto idx : fhDataIndices) {
-        if (jetCategoryForJECFuncMap_[catLabel](std::abs(v_eta[idx]), nCTie4)) {
+        if (jetCategoryForJECFuncMap_[catLabel](v_eta[idx], nCTie4)) {
           jetIndices.emplace_back(idx);
         }
       }
@@ -389,9 +442,29 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
 
         auto const jetMatchIdx(mapMatchIndicesIter->second);
         auto const jetMatchPt(v_match_pt.at(jetMatchIdx));
+        auto const jetMatchE(v_match_E.at(jetMatchIdx));
 
+        auto const jetE(v_E[jetIdx]);
         auto const jetPt(v_pt[jetIdx]);
         auto const jetEta(v_eta[jetIdx]);
+        auto const jetPhi(v_phi[jetIdx]);
+
+        auto const jetERatio(jetE / jetMatchE);
+        auto const jetERatio2(jetMatchE / jetE);
+
+        if (std::isnan(jetERatio)) {
+          std::cout << "ERROR: ratio jetE/jetMatchE is NaN (jetE=" << jetE << ", jetMatchE=" << jetMatchE << ")"
+                    << " [jetCollection=\"" << fhData.jetCollection << "\", matchJetCollection=\"" << matchJetColl
+                    << "\"]" << std::endl;
+          assert(false);
+        }
+
+        if (std::isnan(jetERatio2)) {
+          std::cout << "ERROR: ratio jetMatchE/jetE is NaN (jetE=" << jetE << ", jetMatchE=" << jetMatchE << ")"
+                    << " [jetCollection=\"" << fhData.jetCollection << "\", matchJetCollection=\"" << matchJetColl
+                    << "\"]" << std::endl;
+          assert(false);
+        }
 
         auto const jetPtRatio(jetPt / jetMatchPt);
         auto const jetPtRatio2(jetMatchPt / jetPt);
@@ -410,6 +483,20 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
           assert(false);
         }
 
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel +
+           "__vs__E")
+            ->Fill(jetERatio, jetE, weight);
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel +
+           "__vs__" + matchLabel + "_E")
+            ->Fill(jetERatio, jetMatchE, weight);
+
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_" + matchLabel +
+           "overREC__vs__E")
+            ->Fill(jetERatio2, jetE, weight);
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_" + matchLabel +
+           "overREC__vs__" + matchLabel + "_E")
+            ->Fill(jetERatio2, jetMatchE, weight);
+
         H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt_over" + matchLabel +
            "__vs__pt")
             ->Fill(jetPtRatio, jetPt, weight);
@@ -424,7 +511,10 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
            "overREC__vs__" + matchLabel + "_pt")
             ->Fill(jetPtRatio2, jetMatchPt, weight);
 
+        H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E")->Fill(jetE, weight);
+        H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt")->Fill(jetPt, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_eta")->Fill(jetEta, weight);
+        H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_phi")->Fill(jetPhi, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_nCT")->Fill(nCT, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_nCTie4")->Fill(nCTie4, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_nPU")->Fill(nPU, weight);

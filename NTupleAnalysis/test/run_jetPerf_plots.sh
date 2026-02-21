@@ -33,8 +33,7 @@ for sample in "${samples[@]}"; do
   outd_i=${outdir}/${sample}
 
   opts_i=""
-  if [[ ${sample} == *"QCD_"* ]]; then opts_i="-m '*Jet*' -s '*MET_*' '*/offline*MET*_pt' '*MET*GEN*'" #!!
-#!!  if [[ ${sample} == *"QCD_"* ]]; then opts_i="-m '*Jet*HB*' -s '*MET_*' '*/offline*MET*_pt' '*MET*GEN*'" #!!
+  if [[ ${sample} == *"QCD_"* ]]; then opts_i="-m '*Jet*' -s '*MET_*' '*/offline*MET*_pt' '*MET*GEN*'"
   fi
 
   jetMETPerformance_plots.py -k run3_l1s_jetperf ${opts_i} \
