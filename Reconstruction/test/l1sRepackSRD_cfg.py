@@ -22,7 +22,8 @@ parser.add_argument('--reportEvery', type=int, default=1,
     help='Value of process.MessageLogger.cerr.FwkReport.reportEvery')
 
 parser.add_argument('-l', '--lumiSections', nargs='+', type=int, default=[],
-    help='List of luminosity sections to be processed (if no value is specified, this parameter is ignored)')
+    help='List of luminosity sections to be processed'
+         ' (if no value is specified, this parameter is ignored)')
 
 parser.add_argument('--baseDir', type=str, default='./tmp',
     help='Value of process.EvFDaqDirector.baseDir')
@@ -30,8 +31,12 @@ parser.add_argument('--baseDir', type=str, default='./tmp',
 parser.add_argument('--buBaseDir', type=str, default='.',
     help='Value of process.EvFDaqDirector.buBaseDir')
 
-parser.add_argument('--buBaseDirsNumStreams', type=int, default=29,
+parser.add_argument('--buBaseDirsNumStreams', nargs='+', type=int, default=[29],
     help='Value of process.EvFDaqDirector.buBaseDirsNumStreams')
+
+parser.add_argument('--repeat', type=int, default=1,
+    help='Number of times that the input events are processed,'
+         ' to inflate the number of events in the output file')
 
 args = parser.parse_args()
 
@@ -52,6 +57,9 @@ if not fileNames:
 if os.path.exists(args.outputFileName):
     raise SystemExit(f'>>> Fatal Error - target output file already exists: {args.outputFileName}')
 
+if args.repeat < 1:
+    raise SystemExit(f'>>> Fatal Error - invalid value for the "repeat" parameter: {args.repeat}')
+
 try:
     os.makedirs(f'{args.baseDir}/run{runNumber:06d}')
 except Exception as ex:
@@ -69,7 +77,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = args.reportEvery
 from EventFilter.Utilities.EvFDaqDirector import EvFDaqDirector
 process.EvFDaqDirector = EvFDaqDirector(
     buBaseDirsAll = [buBaseDirsAll],
-    buBaseDirsNumStreams = [args.buBaseDirsNumStreams],
+    buBaseDirsNumStreams = args.buBaseDirsNumStreams,
     runNumber = runNumber,
     baseDir = args.baseDir,
     buBaseDir = args.buBaseDir
@@ -82,7 +90,7 @@ process.source = DAQSource(
     eventChunkSize = 2048,
     eventChunkBlock = 1024,
     fileListMode = True,
-    fileNames = fileNames
+    fileNames = (fileNames * args.repeat)
 )
 
 from IOPool.Output.PoolOutputModule import PoolOutputModule
