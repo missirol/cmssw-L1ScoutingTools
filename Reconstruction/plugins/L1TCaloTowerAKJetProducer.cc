@@ -9,7 +9,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
-#include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
+#include "L1TriggerScouting/Utilities/interface/conversion.h"
 
 #include "fastjet/ClusterSequence.hh"
 #include "fastjet/JetDefinition.hh"
@@ -63,9 +63,24 @@ void L1TCaloTowerAKJetProducer::produce(edm::StreamID, edm::Event& iEvent, edm::
       auto const& input = inputs.at(bx, idx);
       if ((towerMinHwPt_ < 0 or input.hwPt() >= towerMinHwPt_) and
           (towerMaxHwPt_ < 0 or input.hwPt() <= towerMaxHwPt_)) {
-        auto const mpEta = l1t::CaloTools::mpEta(input.hwEta());
-        auto const ctP4 = l1t::CaloTools::p4MP(input.hwPt(), mpEta, input.hwPhi());
-        fjInputs.emplace_back(ctP4.px(), ctP4.py(), ctP4.pz(), ctP4.energy());
+
+        if (not l1ScoutingRun3::calol1::validHwEta(input.hwEta())) {
+          edm::LogWarning("ScoutingJetProducer") << "CaloTower in BX=" << bx << " with invalid hwEta value ("
+                                                 << input.hwEta() << ") will not be used for jet clustering !";
+          continue;
+        }
+
+        if (not l1ScoutingRun3::calol1::validHwPhi(input.hwPhi())) {
+          edm::LogWarning("ScoutingJetProducer") << "CaloTower in BX=" << bx << " with invalid hwPhi value ("
+                                                 << input.hwPhi() << ") will not be used for jet clustering !";
+          continue;
+        }
+
+        float const ctEt = l1ScoutingRun3::calol1::fEt(input.hwPt());
+        float const ctEta = l1ScoutingRun3::calol1::fEta(input.hwEta());
+        float const ctPhi = l1ScoutingRun3::calol1::fPhi(input.hwPhi());
+
+        fjInputs.emplace_back(fastjet::PtYPhiM(ctEt, ctEta, ctPhi, 0));
       }
     }
 
