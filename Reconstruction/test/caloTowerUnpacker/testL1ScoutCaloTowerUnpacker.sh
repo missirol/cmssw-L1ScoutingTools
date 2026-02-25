@@ -17,7 +17,7 @@ COMMON_OPTS+=" --no_exec"
 
 cmsDriver.py "${JOB_LABEL}" --process TEST ${COMMON_OPTS} \
   --python_filename "${JOB_LABEL}"_step1_cfg.py --fileout file:"${JOB_LABEL}"_step1_out.root \
-  -s RAW2DIGI,NANO:@L1DPG -n 10
+  -s RAW2DIGI,NANO:@L1DPG -n 1000
 
 edmConfigDump --prune "${JOB_LABEL}"_step1_cfg.py > "${JOB_LABEL}"_step1_cfg_dump.py
 rm -rf "${JOB_LABEL}"_step1_cfg.py
@@ -28,7 +28,7 @@ cmsRun "${JOB_LABEL}"_step1_cfg_dump.py \
 # Step 2:
 #  convert the CaloTower-related branches to FRD files
 "${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_convertToFRD.py \
-  -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 5 \
+  -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 2 \
   2>&1 | tee "${JOB_LABEL}"_step2.log
 
 # Step 3:

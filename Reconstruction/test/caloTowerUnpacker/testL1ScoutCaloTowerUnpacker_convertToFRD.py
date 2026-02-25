@@ -23,17 +23,17 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-i', '--inputFile', type=str, default=None, required=True,
                     help='Path to NanoAOD input file')
 
+parser.add_argument('-n', '--numOrbits', type=int, default=None, required=True,
+                    help='Number of orbits in the output file(s)')
+
 parser.add_argument('-l', '--caloTowerLabel', type=str, default='L1EmulCaloTower',
                     help='Prefix of CaloTower-related branches in NanoAOD input file')
-
-parser.add_argument('-n', '--numOrbits', type=int, default=10,
-                    help='Number of orbits in the output file(s)')
 
 args = parser.parse_args()
 
 collBXs = None
 try:
-    fillingSchemeFile_url = 'https://gitlab.cern.ch/lhc-injection-scheme/injection-schemes/-/raw/7a04f57ecf1b6f97effa8f2433b68a0e767f9400/25ns_2352b_2340_2004_2133_108bpi_24inj.json'
+    fillingSchemeFile_url = 'https://gitlab.cern.ch/lhc-injection-scheme/injection-schemes/-/raw/7a04f57ecf1b6f97effa8f2433b68a0e767f9400/25ns_2460b_2448_2089_2227_144bpi_20inj.json'
     with tempfile.NamedTemporaryFile() as tmp:
         subprocess.run(f'wget {fillingSchemeFile_url} -O {tmp.name}'.split(), stdout = subprocess.DEVNULL, stderr = subprocess.STDOUT)
         fs = json.load(open(tmp.name))
