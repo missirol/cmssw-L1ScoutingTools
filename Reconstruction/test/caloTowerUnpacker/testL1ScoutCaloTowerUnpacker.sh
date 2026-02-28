@@ -36,7 +36,7 @@ cmsRun "${JOB_LABEL}"_step1_cfg_dump.py \
 #  running jet-clustering on them using FastJet
 LD_PRELOAD=libPerfToolsAllocMonitorPreload.so:libPerfToolsMaxMemoryPreload.so \
 cmsRun "${TEST_DIR}"/testL1ScoutCaloTowerUnpacker_cfg.py \
-  -r "${RUN_NUMBER}" -o "${JOB_LABEL}"_step3_out.root \
+  -i run"${RUN_NUMBER}" -o "${JOB_LABEL}"_step3_out.root \
   2>&1 | tee "${JOB_LABEL}"_step3.log
 
 rm -rf run"${RUN_NUMBER}" tmp __pycache__

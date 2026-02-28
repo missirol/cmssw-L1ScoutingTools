@@ -9,17 +9,28 @@ import FWCore.ParameterSet.Config as cms
 import argparse
 import glob
 import os
+import re
 
 parser = argparse.ArgumentParser(
     description=__doc__,
     formatter_class=argparse.RawTextHelpFormatter
 )
 
-parser.add_argument('-r', '--runNumber', type=int, default=None, required=True,
-    help='Run number of input files')
+parser.add_argument('-i', '--inputDirName', type=str, required=True,
+    help='Path to directory containing the SRD files (e.g. /tmp/run123456/)')
+
+parser.add_argument('-o', '--outputFileName', type=str, default=None,
+    help='Path to EDM output file (if not specified, no output is created)')
 
 parser.add_argument('-n', '--maxEvents', type=int, default=-1,
     help='Value of process.maxEvents.input')
+
+parser.add_argument('-e', '--reportEvery', type=int, default=1,
+    help='Value of process.MessageLogger.cerr.FwkReport.reportEvery')
+
+parser.add_argument('-l', '--lumiSections', nargs='+', type=int, default=[],
+    help='List of luminosity sections to be processed'
+         ' (if no value is specified, this parameter is ignored)')
 
 parser.add_argument('-t', '--nThreads', type=int, default=1,
     help='Value of process.options.numberOfThreads')
@@ -27,8 +38,14 @@ parser.add_argument('-t', '--nThreads', type=int, default=1,
 parser.add_argument('-s', '--nStreams', type=int, default=0,
     help='Value of process.options.numberOfStreams')
 
-parser.add_argument('-e', '--reportEvery', type=int, default=1,
-    help='Value of process.MessageLogger.cerr.FwkReport.reportEvery')
+parser.add_argument('--baseDir', type=str, default='./tmp',
+    help='Value of process.EvFDaqDirector.baseDir')
+
+parser.add_argument('--buBaseDir', type=str, default='.',
+    help='Value of process.EvFDaqDirector.buBaseDir')
+
+parser.add_argument('--buBaseDirsNumStreams', nargs='+', type=int, default=[1],
+    help='Value of process.EvFDaqDirector.buBaseDirsNumStreams')
 
 parser.add_argument('--repeat', type=int, default=1,
     help='Number of times that the input events are processed')
@@ -36,27 +53,28 @@ parser.add_argument('--repeat', type=int, default=1,
 parser.add_argument('-j', '--jet-clustering', action=argparse.BooleanOptionalAction, default=True,
     help='Run (or not) jet-clustering on CaloTowers using FastJet')
 
-parser.add_argument('-o', '--outputFile', type=str, default=None,
-    help='Path to EDM output file (if not specified, no output is created)')
-
 args = parser.parse_args()
 
-runNum = args.runNumber
+buBaseDirsAll = os.path.dirname(os.path.abspath(args.inputDirName))
+runNumber = int(os.path.basename(os.path.abspath(args.inputDirName))[len('run'):])
 
-buBaseDir = '.'
-baseDir = './tmp'
+fileNames = []
+for fname in os.listdir(args.inputDirName):
+    re_match = re.match(f'run{runNumber:06d}' + '_ls([0-9]{4})_index[0-9]{6}.raw$', fname)
+    if not re_match:
+        continue
+    if not args.lumiSections or int(re_match.group(1)) in args.lumiSections:
+        fileNames += [os.path.join(args.inputDirName, fname)]
 
-inputFileNamesPattern = f'{buBaseDir}/run{str(runNum).zfill(6)}/run*_ls*_index*.raw'
-inputFileNames = glob.glob(inputFileNamesPattern)
-inputFileNames = sorted(list(set(inputFileNames)))
+if not fileNames:
+    raise SystemExit(f'>>> Fatal Error - found zero input files with a valid name: {args.inputDirName}')
 
-if not inputFileNames:
-    raise SystemExit(f">>> Fatal Error - found zero valid input files: {inputFileNamesPattern}")
+if args.repeat < 1:
+    raise SystemExit(f'>>> Fatal Error - invalid value for the "repeat" parameter: {args.repeat}')
 
 try:
-    os.remove(baseDir)
-    os.makedirs(f'{baseDir}/run{str(runNum).zfill(6)}')
-except:
+    os.makedirs(f'{args.baseDir}/run{runNumber:06d}')
+except Exception as ex:
     pass
 
 process = cms.Process('SCPU')
@@ -74,12 +92,11 @@ process.MessageLogger.FastReport = cms.untracked.PSet()
 
 from EventFilter.Utilities.EvFDaqDirector import EvFDaqDirector
 process.EvFDaqDirector = EvFDaqDirector(
-    buBaseDirsAll = [baseDir],
-    buBaseDirsNumStreams = [1],
-    fileBrokerHost = 'htcp40.cern.ch',
-    runNumber = runNum,
-    baseDir = baseDir,
-    buBaseDir = buBaseDir
+    buBaseDirsAll = [buBaseDirsAll],
+    buBaseDirsNumStreams = args.buBaseDirsNumStreams,
+    runNumber = runNumber,
+    baseDir = args.baseDir,
+    buBaseDir = args.buBaseDir
 )
 
 from EventFilter.Utilities.DAQSource import DAQSource
@@ -91,7 +108,7 @@ process.source = DAQSource(
     eventChunkSize = 2048,
     eventChunkBlock = 1024,
     fileListMode = True,
-    fileNames = (inputFileNames * args.repeat)
+    fileNames = (fileNames * args.repeat)
 )
 
 from HLTrigger.Timer.FastTimerService import FastTimerService
@@ -116,9 +133,9 @@ if args.jet_clustering:
     )
     process.p += process.l1sAK4CaloTowerJets
 
-if args.outputFile is not None:
+if args.outputFileName:
     process.outputModule = cms.OutputModule('PoolOutputModule',
-        fileName = cms.untracked.string(f'{args.outputFile}'),
+        fileName = cms.untracked.string(f'{args.outputFileName}'),
         outputCommands = cms.untracked.vstring(
             'keep *',
             'drop *_rawDataCollector_*_*',
