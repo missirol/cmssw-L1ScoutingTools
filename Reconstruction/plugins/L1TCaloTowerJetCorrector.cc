@@ -35,12 +35,16 @@ private:
       while (std::getline(infile, line)) {
         std::istringstream iss(line);
 
-        float ptMin{0.f}, ptMax{0.f}, absEtaMin{0.f}, absEtaMax{0.f};
-        int puProxyMin{0}, puProxyMax{0}, formNParams{0};
+        float ptMin{0.f};
+        float ptMax{0.f};
+        float etaMin{0.f};
+        float etaMax{0.f};
+        int puProxyMin{0};
+        int puProxyMax{0};
+        int formNParams{0};
         std::string formEvalStr{""};
 
-        if (!(iss >> ptMin >> ptMax >> absEtaMin >> absEtaMax >> puProxyMin >> puProxyMax >> formEvalStr >>
-              formNParams)) {
+        if (!(iss >> ptMin >> ptMax >> etaMin >> etaMax >> puProxyMin >> puProxyMax >> formEvalStr >> formNParams)) {
           throw cms::Exception("InvalidInput")
               << "failed to read line from input file (invalid format): \"" << line << "\"";
         }
@@ -56,14 +60,13 @@ private:
           }
         }
 
-        data_.emplace_back(
-            ptMin, ptMax, absEtaMin, absEtaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
+        data_.emplace_back(ptMin, ptMax, etaMin, etaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
       }
     }
 
-    double correction(float const pt, float const absEta, int const puProxy) const {
+    double correction(float const pt, float const eta, int const puProxy) const {
       for (auto const& entry : data_) {
-        if ((entry.absEtaMin < 0 or absEta >= entry.absEtaMin) and (entry.absEtaMax < 0 or absEta < entry.absEtaMax) and
+        if (eta >= entry.etaMin and eta < entry.etaMax and
             (entry.puProxyMin < 0 or puProxy >= entry.puProxyMin) and
             (entry.puProxyMax < 0 or puProxy < entry.puProxyMax)) {
           std::vector<double> vars{std::min(std::max(pt, entry.ptMin), entry.ptMax)};
@@ -77,8 +80,8 @@ private:
     struct Entry {
       float ptMin;
       float ptMax;
-      float absEtaMin;
-      float absEtaMax;
+      float etaMin;
+      float etaMax;
       int puProxyMin;
       int puProxyMax;
       reco::FormulaEvaluator formulaEvaluator;
@@ -121,7 +124,7 @@ void L1TCaloTowerJetCorrector::produce(edm::StreamID, edm::Event& iEvent, edm::E
     out_jets.reserve(nInputs);
     for (auto idx = 0u; idx < nInputs; ++idx) {
       auto jet = inputs.at(bx, idx);
-      auto const corr{jetCorrector_.correction(jet.pt(), std::abs(jet.eta()), puProxy)};
+      auto const corr{jetCorrector_.correction(jet.pt(), jet.eta(), puProxy)};
 
       LogTrace("L1TCaloTowerJetCorrector")
           << "[L1TCaloTowerJetCorrector] Jet(bx=" << bx << ", index=" << idx << ") (PU proxy = " << puProxy << ")";
