@@ -25,8 +25,12 @@ void JetResponseAnalysisDriver::init() {
     return ret;
   };
 
-  std::vector<float> eta_v = {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f, 1.6f, 1.9f, 2.2f, 2.5f, 3.0f, 4.0f, 5.0f};
-  {
+  std::vector<float> eta_v = {
+    0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f,
+    1.5f, 1.7f, 1.9f, 2.1f, 2.3f, 2.5f, 2.7f,
+    3.0f, 3.3f, 3.6f, 4.0f, 4.5f, 5.0f
+  };
+  { // add negative-eta values
     auto const eta_v_size0{eta_v.size()};
     for (auto idx = 1u; idx < eta_v_size0; ++idx) {
       auto const idx_offset{eta_v.size() - eta_v_size0};
@@ -34,24 +38,11 @@ void JetResponseAnalysisDriver::init() {
     }
   }
 
+  std::vector<unsigned int> const nCTie4_v{0, 10, 20, 30, 40, 60, 80};
+
   for (auto ai = 0u; (ai + 1) < eta_v.size(); ++ai) {
     auto const a0 = eta_v[ai];
     auto const a1 = eta_v[ai + 1];
-
-    auto const absMin = std::min(std::abs(a0), std::abs(a1));
-
-    std::vector<unsigned int> nCTie4_v{};
-    if (absMin < 0.4f) {
-      nCTie4_v = {0, 20, 30, 40, 60, 80};
-    } else if (absMin == 1.6f) {
-      nCTie4_v = {0, 10, 20, 30, 40, 60};
-    } else if (absMin == 1.9f) {
-      nCTie4_v = {0, 10, 20, 30, 40, 60};
-    } else if (absMin == 2.2f) {
-      nCTie4_v = {0, 10};
-    } else {
-      nCTie4_v = {0, 10, 20, 30, 40, 60, 80};
-    }
 
     for (auto bi = 0u; bi < nCTie4_v.size(); ++bi) {
       auto const b0 = nCTie4_v[bi];
@@ -94,11 +85,11 @@ void JetResponseAnalysisDriver::init() {
 
   labelMap_jetAK4_ = {
       {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+//      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
+//      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJetNoMu"}}},
+//      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}}},
+//      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
   };
 
   for (auto const& selLabel : {"NoSelection"}) {

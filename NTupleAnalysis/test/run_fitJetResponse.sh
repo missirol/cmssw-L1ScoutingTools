@@ -27,9 +27,9 @@ for sample in "${samples[@]}"; do
   ./fitJetResponse.py -k l1s_run3_jecFits \
     -i "${inpdir}"/harvesting/"${sample}".root \
     -o "${outd_i}" \
-    -m "*_pt_GENoverREC_Median_wrt_*pt" "*_E_GENoverREC_Median_wrt_*E" \
+    -m "*_pt_GENoverREC_Median_wrt_*pt" \
     -l 'QCD-#hat{p}_{T}[15-7000], PU[0-120] (Run3Winter25)' \
-    -e png
+    -e png pdf
 
 done
 unset sample outd_i

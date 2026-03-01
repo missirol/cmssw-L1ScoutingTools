@@ -175,7 +175,8 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
 
         for fitf_i in fit_funcs:
             fitf = ROOT.TF1('fitf', fitf_i[1], fitf_i[0], XMIN_FIT, XMAX_FIT)
-            fitfres = h0.Fit(fitf, 'Sq')
+            fitf.SetRange(XMIN_FIT, XMAX_FIT)
+            fitfres = h0.Fit(fitf, 'QRS')
             chi2OverNdof = fitfres.Chi2() / fitfres.Ndf()
             if fitfres.Status() == 0 and (minChi2OverNdof < 0 or chi2OverNdof < minChi2OverNdof):
                 minChi2OverNdof = chi2OverNdof
@@ -513,21 +514,19 @@ def getPlotLabels(key, keyword):
         _jetLabel = 'Uncorrected AK4 L1CaloTowerJets (no E-saturated towers)'
 
     _selLabel = ''
-    sel_match = re.match('.*_eta(\+|-)(\w+)to(\+|-)(\w+)nCTie4(\d+)to(\d+?|Inf)_.*', key)
-    if sel_match:
-        _selLabel += f'{sel_match.group(1)}'
-        _selLabel += f'{sel_match.group(2).replace("p", ".")}'
+    jecBinVals = jecBinValues(key)
+    if jecBinVals:
+        _selLabel += f'{jecBinVals[0]}'
         _selLabel += ' <= |#eta_{jet}| < '
-        _selLabel += f'{sel_match.group(3)}'
-        _selLabel += f'{sel_match.group(4).replace("p", ".")}'
+        _selLabel += f'{jecBinVals[1]}'
         _selLabel += ', '
-        if sel_match.group(6) == 'Inf':
+        if jecBinVals[3] < 0:
             _selLabel += 'N_{CTie4} >= '
-            _selLabel += f'{int(sel_match.group(5))}'
+            _selLabel += f'{jecBinVals[2]}'
         else:
-            _selLabel += f'{int(sel_match.group(5))}'
+            _selLabel += f'{jecBinVals[2]}'
             _selLabel += ' <= N_{CTie4} < '
-            _selLabel += f'{int(sel_match.group(6))}'
+            _selLabel += f'{jecBinVals[3]}'
 
     ## titles of axes
     _titleX, _titleY = key, ''
@@ -665,18 +664,21 @@ def getPlotConfig(key, keyword, inputList):
        cfg.addLogX = True
 
        cfg.autoRangeX = False
+
        cfg.xMin = 1
        cfg.xMax = 3000
-       cfg.xMinFit = 1
-       cfg.xMaxFit = 400
+
+       cfg.doFit = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
+
+       if cfg.doFit:
+           cfg.xMinFit = 1
+           cfg.xMaxFit = fitPtMax(key_basename)
 
        cfg.yMin = -1.1
        cfg.yMax = 4.4
+       cfg.ratio = cfg.doFit
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
-
-       cfg.doFit = False #key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
-       cfg.ratio = cfg.doFit
 
        hcolor = ROOT.kBlack
        if 'nCTie4'+'010' in key:
@@ -711,6 +713,81 @@ def getPlotConfig(key, keyword, inputList):
        return None
 
     return cfg
+
+def jecBinValues(hname):
+    re_match = re.match('.*_eta(\+|-)(\w+)to(\+|-)(\w+)nCTie4(\d+)to(\d+?|Inf)_.*', hname)
+    ret = None
+    if re_match:
+        ret = (
+            float(re_match.group(1) + re_match.group(2).replace("p", ".")),
+            float(re_match.group(3) + re_match.group(4).replace("p", ".")),
+            int(re_match.group(5)),
+            -1 if re_match.group(6) == 'Inf' else int(re_match.group(6))
+        )
+    return ret
+
+def fitPtMax(hname):
+    ret = 500
+
+    jecBinVals = jecBinValues(hname)
+    jecBinMinAbsEtaX10Int = int(10 * abs(jecBinVals[1] if jecBinVals[0] < 0 else jecBinVals[0]))
+
+    if jecBinMinAbsEtaX10Int == 0:
+        if jecBinVals[2] == 0:
+            ret = 160
+    elif jecBinMinAbsEtaX10Int == 19:
+        if jecBinVals[2] >= 60:
+            ret = 400
+        else:
+            ret = 500
+    elif jecBinMinAbsEtaX10Int == 21:
+        if jecBinVals[2] >= 80:
+            ret = 300
+        else:
+            ret = 500
+    elif jecBinMinAbsEtaX10Int == 23:
+        if jecBinVals[2] == 60:
+            ret = 300
+        elif jecBinVals[2] == 80:
+            ret = 250
+        else:
+            ret = 500
+    elif jecBinMinAbsEtaX10Int == 25:
+        if jecBinVals[2] == 60:
+            ret = 300
+        elif jecBinVals[2] == 80:
+            ret = 200
+        else:
+            ret = 400
+    elif jecBinMinAbsEtaX10Int == 27:
+        if jecBinVals[2] >= 60:
+            ret = 200
+        else:
+            ret = 300
+    elif jecBinMinAbsEtaX10Int == 30:
+        if jecBinVals[2] >= 80:
+            ret = 150
+        else:
+            ret = 200
+    elif jecBinMinAbsEtaX10Int == 33:
+        if jecBinVals[2] >= 40:
+            ret = 150
+        else:
+            ret = 200
+    elif jecBinMinAbsEtaX10Int == 36:
+        if jecBinVals[2] >= 40:
+            ret = 150
+        else:
+            ret = 200
+    elif jecBinMinAbsEtaX10Int == 40:
+        ret = 100
+    elif jecBinMinAbsEtaX10Int == 45:
+        if jecBinVals[2] >= 40:
+            ret = 70
+        else:
+            ret = 100
+
+    return ret
 
 #### main
 if __name__ == '__main__':
@@ -850,26 +927,24 @@ if __name__ == '__main__':
                jecOutputLinesDict[jecKey] = []
 
            jec_str = ''
-           jec_str += f'{_plotConfig.xMinFit: 5.1f} '
-           jec_str += f'{_plotConfig.xMaxFit: 5.1f} '
+           jec_str += f'{_plotConfig.xMinFit:6.1f} '
+           jec_str += f'{_plotConfig.xMaxFit:6.1f} '
 
-           sel_match = re.match('.*_eta(\+|-)(\w+)to(\+|-)(\w+)nCTie4(\d+)to(\d+?|Inf)_.*', key_basename)
-           jec_str += f'{sel_match.group(1)}'
-           jec_str += f'{float(sel_match.group(2).replace("p", ".")): 5.3f} '
-           jec_str += f'{sel_match.group(3)}'
-           jec_str += f'{float(sel_match.group(4).replace("p", ".")): 5.3f} '
-           jec_str += f'{int(sel_match.group(5)): 4d} '
-           jec_val4 = -1 if sel_match.group(6) == 'Inf' else int(sel_match.group(6))
-           jec_str += f'{jec_val4: 4d} '
+           jecBinVals = jecBinValues(key_basename)
+           jec_str += f'{jecBinVals[0]:7.3f} '
+           jec_str += f'{jecBinVals[1]:7.3f} '
+           jec_str += f'{jecBinVals[2]:4d} '
+           jec_str += f'{jecBinVals[3]:4d} '
 
            jec_str += f'{fitf.GetFormula().GetTitle():>50} '
-           jec_str += f'{fitf.GetNpar(): 3d}'
+           jec_str += f'{fitf.GetNpar():3d}'
            for parIdx in range(fitf.GetNpar()):
-               jec_str += f' {fitf.GetParameter(parIdx): >8.5f}'
+               jec_str += f' {fitf.GetParameter(parIdx):>12.5f}'
 
            jecOutputLinesDict[jecKey] += [jec_str]
 
    for jecKey in jecOutputLinesDict:
+       jecOutputLinesDict[jecKey].sort(key=lambda x: float(x.split()[2]))
        with open(f'{OUTDIR}/fits_{jecKey}.txt', 'w') as ofile:
            for line in jecOutputLinesDict[jecKey]:
                ofile.write(f'{line}\n')
