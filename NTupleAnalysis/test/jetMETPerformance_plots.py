@@ -376,96 +376,37 @@ def plot(histograms, outputs, title, labels, legXY=[], legNColumns=1, ratio=Fals
 def getPlotLabels(key, isProfile, isEfficiency, keyword):
 
     _objLabel = ''
-    if   key.startswith('GenJet_'):                    _objLabel = 'GEN Jets'
-    elif key.startswith('GenJetNoMu_'):                _objLabel = 'GEN Jets(NoMu)'
-    elif key.startswith('L1EmulJet_'):                 _objLabel = 'L1TJets'
-    elif key.startswith('L1EmulAK4CTJet0_'):           _objLabel = 'L1CaloTowerJets(0)'
-    elif key.startswith('L1EmulAK4CTJet1_'):           _objLabel = 'L1CaloTowerJets(1)'
-    elif key.startswith('L1EmulAK4CTJet0Corr_'):       _objLabel = 'L1CaloTowerJets(0-Corr)'
-    elif key.startswith('L1EmulAK4CTJet0CorrA_'):      _objLabel = 'L1CaloTowerJets(0-CorrA)'
-    elif key.startswith('ak4GenJets_'):                _objLabel = 'AK4GenJets'
-    elif key.startswith('hltAK4CaloJets_'):            _objLabel = 'HLT AK4CaloJets'
-    elif key.startswith('hltAK4CaloJetsCorrected_'):   _objLabel = 'HLT AK4CaloJetsCorrected'
-    elif key.startswith('hltAK4PFJets_'):              _objLabel = 'HLT AK4PFJets'
-    elif key.startswith('hltAK4PFJetsCorrected_'):     _objLabel = 'HLT AK4PFJetsCorrected'
-    elif key.startswith('hltAK4PFCHSJets_'):           _objLabel = 'HLT AK4PFCHSJets'
-    elif key.startswith('hltAK4PFCHSJetsCorrected_'):  _objLabel = 'HLT AK4PFCHSJetsCorrected'
-    elif key.startswith('hltAK4PFCHSv1Jets_'):         _objLabel = 'HLT AK4PFCHSv1Jets'
-    elif key.startswith('hltAK4PFCHSv1JetsCorrected_'):_objLabel = 'HLT AK4PFCHSv1JetsCorrected'
-    elif key.startswith('hltAK4PFCHSv2Jets_'):         _objLabel = 'HLT AK4PFCHSv2Jets'
-    elif key.startswith('hltAK4PFCHSv2JetsCorrected_'):_objLabel = 'HLT AK4PFCHSv2JetsCorrected'
-    elif key.startswith('hltAK4PFPuppiJets_'):           _objLabel = 'HLT AK4PFPuppiJets'
-    elif key.startswith('hltAK4PFPuppiJetsCorrected_'):  _objLabel = 'HLT AK4PFPuppiJetsCorrected'
-    elif key.startswith('hltAK4PFPuppiV1Jets_'):         _objLabel = 'HLT AK4PFPuppiV1Jets'
-    elif key.startswith('hltAK4PFPuppiV3Jets_'):         _objLabel = 'HLT AK4PFPuppiV3Jets'
-    elif key.startswith('ak8GenJets_'):                _objLabel = 'AK8GenJets'
-    elif key.startswith('hltAK8CaloJets_'):            _objLabel = 'HLT AK8CaloJets'
-    elif key.startswith('hltAK8CaloJetsCorrected_'):   _objLabel = 'HLT AK8CaloJetsCorrected'
-    elif key.startswith('hltAK8PFJets_'):              _objLabel = 'HLT AK8PFJets'
-    elif key.startswith('hltAK8PFJetsCorrected_'):     _objLabel = 'HLT AK8PFJetsCorrected'
-    elif key.startswith('hltAK8PFCHSJets_'):           _objLabel = 'HLT AK8PFCHSJets'
-    elif key.startswith('hltAK8PFCHSJetsCorrected_'):  _objLabel = 'HLT AK8PFCHSJetsCorrected'
-    elif key.startswith('hltAK8PFPuppiJets_'):           _objLabel = 'HLT AK8PFPuppiJets'
-    elif key.startswith('hltAK8PFPuppiJetsCorrected_'):  _objLabel = 'HLT AK8PFPuppiJetsCorrected'
-    elif key.startswith('hltCaloMET_'):                _objLabel = 'HLT CaloMET'
-    elif key.startswith('hltPFMET_'):                  _objLabel = 'HLT PFMET'
-    elif key.startswith('hltPFMETNoMu_'):              _objLabel = 'HLT PFMETNoMu'
-    elif key.startswith('hltPFMETTypeOne_'):           _objLabel = 'HLT PFMET Type-1'
-    elif key.startswith('hltPFPuppiMET_'):               _objLabel = 'HLT PFPuppiMET'
-    elif key.startswith('hltPFPuppiMETNoMu_'):           _objLabel = 'HLT PFPuppiMETNoMu'
-    elif key.startswith('hltPFPuppiV1MET_'):             _objLabel = 'HLT PFPuppiV1MET'
-    elif key.startswith('hltPFPuppiV1METNoMu_'):         _objLabel = 'HLT PFPuppiV1METNoMu'
-    elif key.startswith('hltPFPuppiV2MET_'):             _objLabel = 'HLT PFPuppiV2MET'
-    elif key.startswith('hltPFPuppiV2METNoMu_'):         _objLabel = 'HLT PFPuppiV2METNoMu'
-    elif key.startswith('hltPFPuppiV3MET_'):             _objLabel = 'HLT PFPuppiV3MET'
-    elif key.startswith('hltPFPuppiV3METNoMu_'):         _objLabel = 'HLT PFPuppiV3METNoMu'
-    elif key.startswith('hltPFPuppiV4MET_'):             _objLabel = 'HLT PFPuppiV4MET'
-    elif key.startswith('hltPFPuppiV4METNoMu_'):         _objLabel = 'HLT PFPuppiV4METNoMu'
-    elif key.startswith('hltPFCHSMET_'):               _objLabel = 'HLT PF+CHS MET'
-    elif key.startswith('hltPFCHSv1MET_'):             _objLabel = 'HLT PF+CHSv1 MET'
-    elif key.startswith('hltPFCHSv2MET_'):             _objLabel = 'HLT PF+CHSv2 MET'
-    elif key.startswith('hltPFSoftKillerMET_'):        _objLabel = 'HLT PF+SoftKiller MET'
+    if key.startswith('GenJet_'): _objLabel = 'GEN Jets'
+    elif key.startswith('GenJetNoMu_'): _objLabel = 'GEN Jets(NoMu)'
+    elif key.startswith('L1EmulJet_'): _objLabel = 'L1TJets'
+    elif key.startswith('L1EmulAK4CTJet0_'): _objLabel = 'L1CaloTowerJets(0)'
+    elif key.startswith('L1EmulAK4CTJet1_'): _objLabel = 'L1CaloTowerJets(1)'
+    elif key.startswith('L1EmulAK4CTJet0Corr_'):  _objLabel = 'L1CaloTowerJets(0-Corr)'
+    elif key.startswith('L1EmulAK4CTJet0CorrA_'): _objLabel = 'L1CaloTowerJets(0-CorrA)'
 
-    if   '_EtaIncl' in key: pass
-    elif '_Eta2p4'  in key: _objLabel += ', |#eta| < 2.4'
-    elif '_Eta2p5'  in key: _objLabel += ', |#eta| < 2.5'
-    elif '_HB'      in key: _objLabel += ', |#eta| < 1.3'
-    elif '_HGCal'   in key: _objLabel += ', 1.5 < |#eta| < 3.0'
-    elif '_HE1'     in key: _objLabel += ', 1.3 < |#eta| < 2.5'
-    elif '_HE2'     in key: _objLabel += ', 2.5 < |#eta| < 3.0'
-    elif '_HE'      in key: _objLabel += ', 1.3 < |#eta| < 3.0'
-    elif '_HF1'     in key: _objLabel += ', 3.0 < |#eta| < 4.0'
-    elif '_HF2'     in key: _objLabel += ', 4.0 < |#eta| < 5.0'
-    elif '_HF'      in key: _objLabel += ', 3.0 < |#eta| < 5.0'
-    elif 'Pt0'      in key: _objLabel += ', Pt0'
-    elif 'Pt1'      in key: _objLabel += ', Pt1'
-    elif 'Pt2'      in key: _objLabel += ', Pt2'
-    elif 'Pt3'      in key: _objLabel += ', Pt3'
-    elif 'Pt4'      in key: _objLabel += ', Pt4'
-    elif 'Pt5'      in key: _objLabel += ', Pt5'
+    if '_EtaIncl' in key: pass
+    elif '_Eta2p4' in key: _objLabel += ', |#eta| < 2.4'
+    elif '_Eta2p5' in key: _objLabel += ', |#eta| < 2.5'
+    elif '_HB' in key: _objLabel += ', |#eta| < 1.3'
+    elif '_HGCal' in key: _objLabel += ', 1.5 < |#eta| < 3.0'
+    elif '_HE1' in key: _objLabel += ', 1.3 < |#eta| < 2.5'
+    elif '_HE2' in key: _objLabel += ', 2.5 < |#eta| < 3.0'
+    elif '_HE' in key: _objLabel += ', 1.3 < |#eta| < 3.0'
+    elif '_HF1' in key: _objLabel += ', 3.0 < |#eta| < 4.0'
+    elif '_HF2' in key: _objLabel += ', 4.0 < |#eta| < 5.0'
+    elif '_HF' in key: _objLabel += ', 3.0 < |#eta| < 5.0'
 
-    if   '_NotMatchedToGEN'             in key: _objLabel += ' [Not Matched to GEN]'
-    elif '_NotMatchedToL1T'             in key: _objLabel += ' [Not Matched to L1T]'
-    elif '_NotMatchedTohltCalo'         in key: _objLabel += ' [Not Matched to Calo]'
-    elif '_NotMatchedTohltCaloCorr'     in key: _objLabel += ' [Not Matched to CaloCorr]'
-    elif '_NotMatchedTohltPF'           in key: _objLabel += ' [Not Matched to PF]'
-    elif '_NotMatchedTohltPFCorr'       in key: _objLabel += ' [Not Matched to PFCorr]'
-    elif '_NotMatchedTohltPFCHS'        in key: _objLabel += ' [Not Matched to PFCHS]'
-    elif '_NotMatchedTohltPFCHSCorr'    in key: _objLabel += ' [Not Matched to PFCHSCorr]'
-    elif '_NotMatchedTohltPFPuppi'      in key: _objLabel += ' [Not Matched to PFPuppi]'
-    elif '_NotMatchedTohltPFPuppiCorr'  in key: _objLabel += ' [Not Matched to PFPuppiCorr]'
-    elif '_NotMatchedToofflPFPuppiCorr' in key: _objLabel += ' [Not Matched to Offline]'
+    if 'Pt0_' in key: _objLabel += ', Pt0'
+    elif 'Pt1_' in key: _objLabel += ', Pt1'
+    elif 'Pt2_' in key: _objLabel += ', Pt2'
+    elif 'Pt3_' in key: _objLabel += ', Pt3'
+    elif 'Pt4_' in key: _objLabel += ', Pt4'
+    elif 'Pt5_' in key: _objLabel += ', Pt5'
+    elif 'Pt500_' in key: _objLabel += ', p_{T} < 500 GeV'
 
-    elif '_MatchedToGEN'             in key: _objLabel += ' [Matched to GEN]'
-    elif '_MatchedTohltCalo'         in key: _objLabel += ' [Matched to Calo]'
-    elif '_MatchedTohltCaloCorr'     in key: _objLabel += ' [Matched to CaloCorr]'
-    elif '_MatchedTohltPF'           in key: _objLabel += ' [Matched to PF]'
-    elif '_MatchedTohltPFCorr'       in key: _objLabel += ' [Matched to PFCorr]'
-    elif '_MatchedTohltPFCHS'        in key: _objLabel += ' [Matched to PFCHS]'
-    elif '_MatchedTohltPFCHSCorr'    in key: _objLabel += ' [Matched to PFCHSCorr]'
-    elif '_MatchedTohltPFPuppi'      in key: _objLabel += ' [Matched to PFPuppi]'
-    elif '_MatchedTohltPFPuppiCorr'  in key: _objLabel += ' [Matched to PFPuppiCorr]'
-    elif '_MatchedToofflPFPuppiCorr' in key: _objLabel += ' [Matched to Offline]'
+    if '_NotMatchedToGEN' in key: _objLabel += ' [Not Matched to GEN]'
+    elif '_NotMatchedToL1T' in key: _objLabel += ' [Not Matched to L1T]'
+    elif '_MatchedToGEN' in key: _objLabel += ' [Matched to GEN]'
 
     ## axes' titles
     _titleX, _titleY = key, ''
@@ -1688,7 +1629,7 @@ def getPlotConfig(key, keyword, inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0Corr_', 'L1EmulAK4CTJet0Corr_'), Legend='CaloTowerJets (Corr-NEW)', Color=ROOT.kGreen+1) if idx==0 else None]
 
        elif 'L1EmulJet_' in key and pt_profile:
-           cfg.xMax = 400
+           cfg.xMax = 500
 
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
@@ -1707,7 +1648,7 @@ def getPlotConfig(key, keyword, inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0Corr_', 'MatchedToL1CT0Corr_'), Legend='CaloTowerJets (Corr-NEW)', Color=ROOT.kGreen+1) if idx==0 else None]
 
        elif 'MatchedToL1T_' in key and pt_profile:
-           cfg.xMax = 400
+           cfg.xMax = 500
 
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1T_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]

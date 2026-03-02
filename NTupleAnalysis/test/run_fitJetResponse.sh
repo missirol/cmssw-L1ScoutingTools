@@ -32,7 +32,6 @@ for sample in "${samples[@]}"; do
     -e png pdf
 
 done
-unset sample outd_i
 
 if [ ${outtar} -gt 0 ] && [ -d "${outdir}" ]; then
   tar cfz "${outdir}".tar.gz "${outdir}"
