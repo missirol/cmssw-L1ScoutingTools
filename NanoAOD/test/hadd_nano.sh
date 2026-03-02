@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-inpdir=output_l1sNTuple_260221
+inpdir=output_l1sNTuple_260301
 sampleName=Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120
 
 for nnn in {0..4}; do
