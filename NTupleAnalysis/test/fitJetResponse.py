@@ -231,6 +231,14 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
            tf1_tmp.Draw('l,same')
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
+           if XMAX_FIT < XMAX:
+               tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
+               tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
+               tfMax_tmp.SetRange(XMAX_FIT, XMAX)
+               tfMax_tmp.SetLineWidth(tf1.GetLineWidth())
+               tfMax_tmp.SetLineColor(tf1.GetLineColor())
+               tfMax_tmp.SetLineStyle(1)
+               tfMax_tmp.Draw('l,same')
 
        for _tmp in histograms:
            if _tmp.th1 is not None:
@@ -285,6 +293,14 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
            tf1_tmp.Draw('l,same')
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
+           if XMAX_FIT < XMAX:
+               tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
+               tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
+               tfMax_tmp.SetRange(XMAX_FIT, XMAX)
+               tfMax_tmp.SetLineWidth(tf1.GetLineWidth())
+               tfMax_tmp.SetLineColor(tf1.GetLineColor())
+               tfMax_tmp.SetLineStyle(1)
+               tfMax_tmp.Draw('l,same')
 
        h11 = None
        for _tmp in histograms:
