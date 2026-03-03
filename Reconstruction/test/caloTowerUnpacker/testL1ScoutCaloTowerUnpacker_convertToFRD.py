@@ -7,6 +7,7 @@ Original Author: Rocco Ardino (CERN)
 """
 import argparse
 import awkward
+import datetime
 import json
 import numpy
 import os
@@ -163,7 +164,7 @@ for i in range(1, num_orbits + 1):
             izb = 0 # roll over
 
     if i%patience == 0:
-        print(f"At orbit {i} (size = {len(orbitdata)/2**20:1.3f} MB)")
+        print(f"At orbit {i} (size = {len(orbitdata)/2**20:1.3f} MB) [{datetime.datetime.now()}]")
 
     eh_raw  = bytes()
     eh_raw += struct.pack('H', eh_version)

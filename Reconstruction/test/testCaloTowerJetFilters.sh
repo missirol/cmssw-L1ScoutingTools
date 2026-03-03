@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-JOB_LABEL=tmp2
+JOB_LABEL=tmp3
 
 TEST_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
@@ -33,34 +33,82 @@ cat <<@EOF >> filein.txt
 COMMON_OPTS=" --filein filelist:filein.txt"
 COMMON_OPTS+=" --data --conditions 160X_dataRun3_HLT_v1 --geometry DB:Extended"
 COMMON_OPTS+=" --scenario pp --era Run3_2025"
-COMMON_OPTS+=" --datatier NANOAOD --eventcontent NANOAOD"
-COMMON_OPTS+=" --nThreads 32 --nStreams 0"
+COMMON_OPTS+=" --no_output"
+COMMON_OPTS+=" --nThreads 1 --nStreams 0"
 COMMON_OPTS+=" --no_exec"
 
 cmsDriver.py "${JOB_LABEL}" --process TEST ${COMMON_OPTS} \
-  --python_filename "${JOB_LABEL}"_step1_cfg.py --fileout file:"${JOB_LABEL}"_step1_out.root \
-  -s RAW2DIGI,NANO:@L1DPG -n 5440
+  --python_filename "${JOB_LABEL}"_step1_cfg.py \
+  -s RAW2DIGI --customise L1Trigger/Configuration/customiseReEmul.L1TReEmulFromRAW \
+  -n 5000
+
+rm -f filein.txt
+
+cat <<@EOF >> "${JOB_LABEL}"_step1_cfg.py
+
+from L1ScoutingTools.Reconstruction.l1sCTMultAbsIEta4_cfi import l1sCTMultAbsIEta4 as _l1sCTMultAbsIEta4
+from L1ScoutingTools.Reconstruction.l1sAK4CTJets0Emu_cfi import l1sAK4CTJets0Emu as _l1sAK4CTJets0Emu
+from L1ScoutingTools.Reconstruction.l1sAK4CTJets0EmuCorr_cfi import l1sAK4CTJets0EmuCorr as _l1sAK4CTJets0EmuCorr
+
+process.l1sCTMultAbsIEta4 = _l1sCTMultAbsIEta4.clone()
+
+process.l1sAK4CTJets0Emu = _l1sAK4CTJets0Emu.clone()
+
+process.l1sAK4CTJets0EmuCorr = _l1sAK4CTJets0EmuCorr.clone()
+
+process.L1SCaloTowerAK4JetSequence = cms.Sequence(
+    process.l1sCTMultAbsIEta4
+  + process.l1sAK4CTJets0Emu
+  + process.l1sAK4CTJets0EmuCorr
+)
+
+from L1ScoutingTools.Reconstruction.L1TJetKinematicsFilter import L1TJetKinematicsFilter
+process.l1sAK4CTJets0EmuCorrN2Pt20AbsEta2p5 = L1TJetKinematicsFilter(
+    src = 'l1sAK4CTJets0EmuCorr',
+    bxMin = 0,
+    bxMax = 0,
+    nMin = 2,
+    ptMin = 20,
+    absEtaMin = -1,
+    absEtaMax = 2.5,
+)
+
+process.l1sAK4CTJets0EmuCorrN2Pt30AbsEta2p5 = process.l1sAK4CTJets0EmuCorrN2Pt20AbsEta2p5.clone(
+    ptMin = 30
+)
+
+process.l1sAK4CTJets0EmuCorrN1Pt40AbsEta1p3 = process.l1sAK4CTJets0EmuCorrN2Pt20AbsEta2p5.clone(
+    nMin = 1,
+    ptMin = 40,
+    absEtaMax = 1.3
+)
+
+process.L1S_AK4CaloTowerJets_N2Pt20AbsEta2p5 = cms.Path(
+    process.L1SCaloTowerAK4JetSequence
+  + process.l1sAK4CTJets0EmuCorrN2Pt20AbsEta2p5
+)
+process.schedule.append(process.L1S_AK4CaloTowerJets_N2Pt20AbsEta2p5)
+
+process.L1S_AK4CaloTowerJets_N2Pt30AbsEta2p5 = cms.Path(
+    process.L1SCaloTowerAK4JetSequence
+  + process.l1sAK4CTJets0EmuCorrN2Pt30AbsEta2p5
+)
+process.schedule.append(process.L1S_AK4CaloTowerJets_N2Pt30AbsEta2p5)
+
+process.L1S_AK4CaloTowerJets_N1Pt40AbsEta1p3_N2Pt30AbsEta2p5 = cms.Path(
+    process.L1SCaloTowerAK4JetSequence
+  + process.l1sAK4CTJets0EmuCorrN2Pt30AbsEta2p5
+  + process.l1sAK4CTJets0EmuCorrN1Pt40AbsEta1p3
+)
+process.schedule.append(process.L1S_AK4CaloTowerJets_N1Pt40AbsEta1p3_N2Pt30AbsEta2p5)
+
+process.options.wantSummary = True
+@EOF
 
 edmConfigDump --prune "${JOB_LABEL}"_step1_cfg.py > "${JOB_LABEL}"_step1_cfg_dump.py
 rm -rf "${JOB_LABEL}"_step1_cfg.py
 
 cmsRun "${JOB_LABEL}"_step1_cfg_dump.py \
   2>&1 | tee "${JOB_LABEL}"_step1.log
-
-# Step 2:
-#  convert the CaloTower-related branches to FRD files
-"${TEST_DIR}"/caloTowerUnpacker/testL1ScoutCaloTowerUnpacker_convertToFRD.py \
-  -i "${JOB_LABEL}"_step1_out.root -l L1EmulCaloTower -n 10 \
-  2>&1 | tee "${JOB_LABEL}"_step2.log
-
-# Step 3:
-#  convert the output of step-2 into a single EDM file in ROOT format
-cmsRun "${TEST_DIR}"/l1sRepackSRD_cfg.py \
-  --buBaseDirsNumStreams 1 \
-  -n -1 \
-  --repeat 100 \
-  -i run398183 \
-  -o "${JOB_LABEL}"_step3_out.root \
-  2>&1 | tee "${JOB_LABEL}"_step3.log
 
 rm -rf __pycache__
