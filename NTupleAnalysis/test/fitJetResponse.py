@@ -533,7 +533,7 @@ def getPlotLabels(key, keyword):
     jecBinVals = jecBinValues(key)
     if jecBinVals:
         _selLabel += f'{jecBinVals[0]}'
-        _selLabel += ' <= |#eta_{jet}| < '
+        _selLabel += ' <= #eta_{jet} < '
         _selLabel += f'{jecBinVals[1]}'
         _selLabel += ', '
         if jecBinVals[3] < 0:
