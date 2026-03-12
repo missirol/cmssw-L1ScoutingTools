@@ -192,13 +192,13 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
 
         fit_funcs = []
         if doFit2:
-            fit_funcs += [(4, '[0]+[1]*x+[2]*x^2+[3]*log(x)')]
-            fit_funcs += [(3, '[0]+[1]*x+[2]*x^2')]
-            fit_funcs += [(2, '[0]+[1]*x')]
+            fit_funcs += [(4, '[0] + [1]*x + [2]*x^2 + [3]*log(x)')]
+            fit_funcs += [(3, '[0] + [1]*x + [2]*x^2')]
+            fit_funcs += [(2, '[0] + [1]*x')]
         else:
-            fit_funcs += [(4, '[0]+[1]*(x/1000)+[2]*(x/1000)^2+[3]*log(x)')]
-            fit_funcs += [(3, '[0]+[1]*(x/1000)+[2]*(x/1000)^2')]
-            fit_funcs += [(2, '[0]+[1]*(x/1000)')]
+            fit_funcs += [(4, '[0] + [1]*(x/1000) + [2]*(x/1000)^2 + [3]*log(x)')]
+            fit_funcs += [(3, '[0] + [1]*(x/1000) + [2]*(x/1000)^2')]
+            fit_funcs += [(2, '[0] + [1]*(x/1000)')]
 
         XMIN_FIT = xMinFit if xMinFit else XMIN
         XMAX_FIT = xMaxFit if xMaxFit else XMAX
@@ -345,40 +345,23 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        h0 = pad1.DrawFrame(XMIN, YMIN, XMAX, YMAX)
 
        if tf1:
-           tf1_tmp = tf1.Clone()
-           tf1_tmp.SetLineStyle(2)
-           tf1_tmp.SetRange(XMIN, XMAX)
-           tf1_tmp.Draw('l,same')
-           tf1.SetRange(XMIN_FIT, XMAX_FIT)
+           tf1.SetRange(XMIN, XMAX)
+           tf1.SetLineStyle(2)
            tf1.Draw('l,same')
 
-           if XMIN_FIT > XMIN:
-               if doFit2:
-                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'max(0., pol1)', XMIN, XMIN_FIT)
-                   tfMin_tmp.SetParameter(0, 0)
-                   tfMin_tmp.SetParameter(1, tf1.Eval(XMIN_FIT) / XMIN_FIT)
-               else:
-                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'pol0', XMIN, XMIN_FIT)
-                   tfMin_tmp.SetParameter(0, tf1.Eval(XMIN_FIT))
-               tfMin_tmp.SetRange(XMIN, XMIN_FIT)
-               tfMin_tmp.SetLineWidth(tf1.GetLineWidth())
-               tfMin_tmp.SetLineColor(tf1.GetLineColor())
-               tfMin_tmp.SetLineStyle(1)
-               tfMin_tmp.Draw('l,same')
-
-           if XMAX_FIT < XMAX:
-               if doFit2:
-                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'max(0., pol1)', XMAX_FIT, XMAX)
-                   tfMax_tmp.SetParameter(0, 0)
-                   tfMax_tmp.SetParameter(1, tf1.Eval(XMAX_FIT) / XMAX_FIT)
-               else:
-                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
-                   tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
-               tfMax_tmp.SetRange(XMAX_FIT, XMAX)
-               tfMax_tmp.SetLineWidth(tf1.GetLineWidth())
-               tfMax_tmp.SetLineColor(tf1.GetLineColor())
-               tfMax_tmp.SetLineStyle(1)
-               tfMax_tmp.Draw('l,same')
+           tf1_ext_func0 = f'({tf1.GetFormula().GetTitle()}) * (x > {XMIN_FIT}) * (x < {XMAX_FIT})'
+           tf1_ext_func0 += f' + (x <= {XMIN_FIT}) * [{0 + fitf.GetNpar()}]' + ' * x' * doFit2
+           tf1_ext_func0 += f' + (x >= {XMAX_FIT}) * [{1 + fitf.GetNpar()}]' + ' * x' * doFit2
+           tf1_ext = ROOT.TF1('tf1_ext', f'max(0., {tf1_ext_func0})', XMIN, XMAX)
+           for fitf_paramIdx in range(tf1.GetNpar()):
+               tf1_ext.SetParameter(fitf_paramIdx, tf1.GetParameter(fitf_paramIdx))
+           tf1_ext.SetParameter(0 + fitf.GetNpar(), tf1.Eval(XMIN_FIT) / XMIN_FIT)
+           tf1_ext.SetParameter(1 + fitf.GetNpar(), tf1.Eval(XMAX_FIT) / XMAX_FIT)
+           tf1_ext.SetRange(XMIN, XMAX)
+           tf1_ext.SetLineWidth(tf1.GetLineWidth())
+           tf1_ext.SetLineColor(tf1.GetLineColor())
+           tf1_ext.SetLineStyle(1)
+           tf1_ext.Draw('l,same')
 
        h11 = None
        for _tmp in histograms:
