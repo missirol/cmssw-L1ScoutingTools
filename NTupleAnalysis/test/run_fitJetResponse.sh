@@ -24,13 +24,15 @@ samples=(
 for sample in "${samples[@]}"; do
   outd_i="${outdir}"/"${sample}"
 
+#  histMatch="*_pt_GENoverREC_Median_wrt_*pt" # "fit method 1"
+  histMatch="*_pt__vs__GEN_pt" # "fit method 2"
+
   ./fitJetResponse.py -k l1s_run3_jecFits \
     -i "${inpdir}"/harvesting/"${sample}".root \
     -o "${outd_i}" \
-    -m "*_pt_GENoverREC_Median_wrt_*pt" \
+    -m "${histMatch}" \
     -l 'QCD-#hat{p}_{T}[15-7000], PU[0-120] (Run3Winter25)' \
     -e png pdf
-
 done
 
 if [ ${outtar} -gt 0 ] && [ -d "${outdir}" ]; then

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import ctypes
 import os
 import fnmatch
 import math
@@ -73,7 +74,29 @@ class Histogram:
         self.Legend = ''
         self.LegendDraw = ''
 
-def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addLogX=False, doFit=False, ratio=False, ratioPadFrac=0.3, xMin=None, xMax=None, yMin=None, yMax=None, xMinFit=None, xMaxFit=None, yMinRatio=None, yMaxRatio=None, logX=False, logY=False, autoRangeX=False, xLabelSize=None, xBinLabels=None):
+def medianProfileGraph(th2, profile_mean_stats_per_bin=10):
+    ret = ROOT.TGraphAsymmErrors()
+    ret.SetTitle(th2.GetTitle())
+    ret.SetName(th2.GetName())
+    for biny in range(1, 1+th2.GetNbinsY()):
+        htmp = th2.ProjectionX('_htmp'+str(biny), biny, biny, 'e')
+        med, medQ = ctypes.c_double(0.), ctypes.c_double(0.5)
+        if htmp.Integral() > profile_mean_stats_per_bin:
+            htmp.GetQuantiles(1, med, medQ)
+            # median (and its approximated error)
+            val = med.value
+            err = 1.253 * htmp.GetMeanError()
+            biny_center = th2.GetYaxis().GetBinCenter(biny)
+            biny_hlfwdt = th2.GetYaxis().GetBinWidth(biny) * 0.5
+            ret.AddPoint(val, biny_center)
+            ret.SetPointError(ret.GetN()-1, err, err, biny_hlfwdt, biny_hlfwdt)
+        del htmp
+    return ret
+
+def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
+    addLogX=False, addLogXY=False, doFit=False, doFit2=False, ratio=False, ratioPadFrac=0.3,
+    xMin=None, xMax=None, yMin=None, yMax=None, xMinFit=None, xMaxFit=None, yMinRatio=None, yMaxRatio=None,
+    logX=False, logY=False, autoRangeX=False, xLabelSize=None, xBinLabels=None):
 
     xyMinMax = []
     if histograms[0].th1.InheritsFrom('TGraph'):
@@ -120,14 +143,14 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
        for _tmp in histograms:
            if (_tmp.th1 is not None):
               if hasattr(_tmp.th1, 'GetNbinsX'):
-                 tmpXMin, tmpXMax = _tmp.th1.GetBinLowEdge(1), _tmp.th1.GetBinLowEdge(1+_tmp.th1.GetNbinsX())
+                 tmpXMin, tmpXMax = _tmp.th1.GetXaxis().GetBinLowEdge(1), _tmp.th1.GetXaxis().GetBinLowEdge(1+_tmp.th1.GetNbinsX())
                  if _tmp.th1.Integral() > 0.:
                     for i_bin in range(1, _tmp.th1.GetNbinsX()+1):
                         if (_tmp.th1.GetBinContent(i_bin) != 0.) or (_tmp.th1.GetBinError(i_bin) != 0.): break
-                        tmpXMin = _tmp.th1.GetBinLowEdge(i_bin)
+                        tmpXMin = _tmp.th1.GetXaxis().GetBinLowEdge(i_bin)
                     for i_bin in reversed(range(1, _tmp.th1.GetNbinsX()+1)):
                         if (_tmp.th1.GetBinContent(i_bin) != 0.) or (_tmp.th1.GetBinError(i_bin) != 0.): break
-                        tmpXMax = _tmp.th1.GetBinLowEdge(i_bin)
+                        tmpXMax = _tmp.th1.GetXaxis().GetBinLowEdge(i_bin)
                  xMinCalc = min(xMinCalc, tmpXMin) if xMinCalc is not None else tmpXMin
                  xMaxCalc = max(xMaxCalc, tmpXMax) if xMaxCalc is not None else tmpXMax
               else:
@@ -135,8 +158,8 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
                  xMinCalc = min(xMinCalc, _tmp_xyMinMax[0]) if xMinCalc is not None else _tmp_xyMinMax[0]
                  xMaxCalc = max(xMaxCalc, _tmp_xyMinMax[2]) if xMaxCalc is not None else _tmp_xyMinMax[2]
     else:
-       xMinCalc = xyMinMax[0] if xyMinMax else histograms[0].th1.GetBinLowEdge(1)
-       xMaxCalc = xyMinMax[2] if xyMinMax else histograms[0].th1.GetBinLowEdge(1+histograms[0].th1.GetNbinsX())
+       xMinCalc = xyMinMax[0] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1)
+       xMaxCalc = xyMinMax[2] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1+histograms[0].th1.GetNbinsX())
 
     XMIN = xMinCalc if xMin is None else (max(xMin, xMinCalc) if autoRangeX else xMin)
     XMAX = xMaxCalc if xMax is None else (min(xMax, xMaxCalc) if autoRangeX else xMax)
@@ -157,6 +180,7 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
     if YMAX is None: YMAX = .0003*((HMAX/.0003)**(1./.80)) if logY else .0001+((HMAX-.0001) *(1./.80))
 
     tf1 = None
+
     if doFit:
         if len(histograms) != 1:
             KILL(f'plot -- (doFit=True) invalid number of input histograms ({len(histograms)})')
@@ -167,8 +191,14 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
         minChi2OverNdof = -1
 
         fit_funcs = []
-#        fit_funcs += [(idx, f'pol{idx}') for idx in range(3, 12)]:
-        fit_funcs += [(4, '[0]+[1]*(x/1000)+[2]*(x/1000)^2+[3]*log(x)')]
+        if doFit2:
+            fit_funcs += [(4, '[0]+[1]*x+[2]*x^2+[3]*log(x)')]
+            fit_funcs += [(3, '[0]+[1]*x+[2]*x^2')]
+            fit_funcs += [(2, '[0]+[1]*x')]
+        else:
+            fit_funcs += [(4, '[0]+[1]*(x/1000)+[2]*(x/1000)^2+[3]*log(x)')]
+            fit_funcs += [(3, '[0]+[1]*(x/1000)+[2]*(x/1000)^2')]
+            fit_funcs += [(2, '[0]+[1]*(x/1000)')]
 
         XMIN_FIT = xMinFit if xMinFit else XMIN
         XMAX_FIT = xMaxFit if xMaxFit else XMAX
@@ -177,11 +207,13 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
             fitf = ROOT.TF1('fitf', fitf_i[1], fitf_i[0], XMIN_FIT, XMAX_FIT)
             fitf.SetRange(XMIN_FIT, XMAX_FIT)
             fitfres = h0.Fit(fitf, 'QRS')
-            chi2OverNdof = fitfres.Chi2() / fitfres.Ndf()
-            if fitfres.Status() == 0 and (minChi2OverNdof < 0 or chi2OverNdof < minChi2OverNdof):
-                minChi2OverNdof = chi2OverNdof
-                tfitres = fitfres
-                tf1 = fitf
+            if fitfres.Ndf() > 0:
+                chi2OverNdof = fitfres.Chi2() / fitfres.Ndf()
+                if fitfres.Status() == 0 and (minChi2OverNdof < 0 or chi2OverNdof < minChi2OverNdof):
+                    minChi2OverNdof = chi2OverNdof
+                    tfitres = fitfres
+                    tf1 = fitf
+                    break
 
         if tf1 and tfitres:
             tf1.SetLineColor(h0.GetLineColor())
@@ -232,8 +264,13 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
            if XMAX_FIT < XMAX:
-               tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
-               tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
+               if doFit2:
+                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'max(0., pol1)', XMAX_FIT, XMAX)
+                   tfMax_tmp.SetParameter(0, 0)
+                   tfMax_tmp.SetParameter(1, tf1.Eval(XMAX_FIT) / XMAX_FIT)
+               else:
+                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
+                   tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
                tfMax_tmp.SetRange(XMAX_FIT, XMAX)
                tfMax_tmp.SetLineWidth(tf1.GetLineWidth())
                tfMax_tmp.SetLineColor(tf1.GetLineColor())
@@ -242,7 +279,7 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
 
        for _tmp in histograms:
            if _tmp.th1 is not None:
-              _tmp.th1.Draw(_tmp.draw)
+               _tmp.th1.Draw(_tmp.draw)
 
        h0.Draw('axis,same')
        h0.SetTitle(title)
@@ -294,8 +331,13 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
            if XMAX_FIT < XMAX:
-               tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
-               tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
+               if doFit2:
+                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'max(0., pol1)', XMAX_FIT, XMAX)
+                   tfMax_tmp.SetParameter(0, 0)
+                   tfMax_tmp.SetParameter(1, tf1.Eval(XMAX_FIT) / XMAX_FIT)
+               else:
+                   tfMax_tmp = ROOT.TF1('tfMax_tmp', 'pol0', XMAX_FIT, XMAX)
+                   tfMax_tmp.SetParameter(0, tf1.Eval(XMAX_FIT))
                tfMax_tmp.SetRange(XMAX_FIT, XMAX)
                tfMax_tmp.SetLineWidth(tf1.GetLineWidth())
                tfMax_tmp.SetLineColor(tf1.GetLineColor())
@@ -489,15 +531,21 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1, addL
 
         print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file))
 
-    if addLogX:
+    if addLogX or addLogXY:
         if ratio:
             pad1.SetLogx(True)
             pad2.SetLogx(True)
+            if addLogXY:
+                pad1.SetLogy(True)
         else:
             canvas.SetLogx(True)
+            if addLogXY:
+                canvas.SetLogy(True)
+
+        output_file_postfix = 'logXY' if addLogXY else 'logX'
 
         for output_file in outputs:
-            output_file_logX = '_logX.'.join(output_file.rsplit('.', 1))
+            output_file_logX = f'_{output_file_postfix}.'.join(output_file.rsplit('.', 1))
             canvas.SaveAs(output_file_logX)
             print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file_logX))
 
@@ -586,6 +634,12 @@ def getPlotLabels(key, keyword):
       elif key.endswith('_nCT'): _titleX = 'N_{CT}'
       elif key.endswith('_nCTie4'): _titleX = 'N_{CTie4}'
 
+    # special case: 2D histogram converted to
+    # the "inverted" profile of the X-median value
+    if key.endswith('_pt__vs__GEN_pt'):
+       _titleX = 'Jet p_{T} (median) [GeV]'
+       _titleY = 'GEN Jet p_{T} (bin center) [GeV]'
+
     return _titleX, _titleY, _jetLabel, _selLabel
 
 class PlotConfig:
@@ -594,6 +648,7 @@ class PlotConfig:
         self.IsProfile = False
         self.IsEfficiency = False
         self.addLogX = False
+        self.addLogXY = False
         self.logX = False
         self.logY = False
         self.titleX = ''
@@ -606,6 +661,8 @@ class PlotConfig:
         self.xMax = None
         self.xMinFit = None
         self.xMaxFit = None
+        self.yMin = None
+        self.yMax = None
         self.yMinRatio = None
         self.yMaxRatio = None
         self.ratio = True
@@ -616,20 +673,20 @@ class PlotConfig:
 
 def getHistogram(key, inputDict, plotCfg, **kwargs):
 
-    Legend      = kwargs.get('Legend'     , inputDict['Legend'])
-    Color       = kwargs.get('Color'      , inputDict['LineColor'])
-    LineWidth   = kwargs.get('LineStyle'  , 2)
-    LineStyle   = kwargs.get('LineStyle'  , inputDict['LineStyle'])
+    Legend = kwargs.get('Legend', inputDict['Legend'])
+    Color = kwargs.get('Color', inputDict['LineColor'])
+    LineWidth = kwargs.get('LineStyle', 2)
+    LineStyle = kwargs.get('LineStyle', inputDict['LineStyle'])
     MarkerStyle = kwargs.get('MarkerStyle', inputDict['MarkerStyle'])
-    MarkerSize  = kwargs.get('MarkerSize' , inputDict['MarkerSize'])
+    MarkerSize = kwargs.get('MarkerSize', inputDict['MarkerSize'])
 
     if key not in inputDict['TH1s']:
-       return None
+        return None
 
     h0 = inputDict['TH1s'][key].Clone()
 
     if h0.InheritsFrom('TH2'):
-       return None
+        h0 = medianProfileGraph(h0)
 
     h0.UseCurrentStyle()
     if hasattr(h0, 'SetDirectory'):
@@ -654,6 +711,10 @@ def getHistogram(key, inputDict, plotCfg, **kwargs):
     hist0.Legend = Legend
     hist0.LegendDraw = 'ep' if (plotCfg.IsProfile or plotCfg.IsEfficiency) else 'l'
 
+    if h0.InheritsFrom('TGraph'):
+        hist0.draw = 'ep,same'
+        hist0.LegendDraw = 'ep'
+
     return hist0
 
 def getPlotConfig(key, keyword, inputList):
@@ -677,22 +738,33 @@ def getPlotConfig(key, keyword, inputList):
 
     if keyword == 'l1s_run3_jecFits':
 
-       cfg.addLogX = True
-
        cfg.autoRangeX = False
 
-       cfg.xMin = 1
-       cfg.xMax = 3000
+       doFit1 = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
+       cfg.doFit2 = key_basename.endswith('pt__vs__GEN_pt')
+       cfg.doFit = doFit1 or cfg.doFit2
 
-       cfg.doFit = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
-
-       if cfg.doFit:
+       if doFit1:
            cfg.xMinFit = 1
-           cfg.xMaxFit = fitPtMax(key_basename)
+           cfg.xMaxFit = fit1PtMax(key_basename)
+           cfg.xMin = 1
+           cfg.xMax = 3000
+           cfg.yMin = -1.1
+           cfg.yMax = 4.4
+       elif cfg.doFit2:
+           cfg.xMinFit = 1
+           cfg.xMaxFit = fit2PtMax(key_basename)
+           cfg.xMin = 1
+           cfg.xMax = 600
+           cfg.yMin = 1
+           cfg.yMax = 600
 
-       cfg.yMin = -1.1
-       cfg.yMax = 4.4
-       cfg.ratio = cfg.doFit
+       if cfg.doFit2:
+           cfg.addLogXY = True
+       else:
+           cfg.addLogX = True
+
+       cfg.ratio = doFit1
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
 
@@ -742,7 +814,7 @@ def jecBinValues(hname):
         )
     return ret
 
-def fitPtMax(hname):
+def fit1PtMax(hname):
     ret = 500
 
     jecBinVals = jecBinValues(hname)
@@ -802,6 +874,45 @@ def fitPtMax(hname):
             ret = 70
         else:
             ret = 100
+    return ret
+
+def fit2PtMax(hname):
+    ret = 300
+
+    jecBinVals = jecBinValues(hname)
+    jecBinMinAbsEtaX10Int = int(10 * abs(jecBinVals[1] if jecBinVals[0] < 0 else jecBinVals[0]))
+
+    if jecBinMinAbsEtaX10Int == 0:
+        if jecBinVals[2] == 0:
+            ret = 110
+    elif jecBinMinAbsEtaX10Int == 25:
+        if jecBinVals[2] >= 60:
+            ret = 200
+    elif jecBinMinAbsEtaX10Int == 27:
+        if jecBinVals[2] >= 60:
+            ret = 80
+    elif jecBinMinAbsEtaX10Int == 30:
+        if jecBinVals[2] >= 60:
+            ret = 110
+    elif jecBinMinAbsEtaX10Int == 33:
+        if jecBinVals[2] >= 80:
+            ret = 110
+        else:
+            ret = 150
+    elif jecBinMinAbsEtaX10Int == 36:
+        if jecBinVals[2] >= 30:
+            ret = 150
+        elif jecBinVals[2] >= 80:
+            ret = 100
+        else:
+            ret = 200
+    elif jecBinMinAbsEtaX10Int == 40:
+        ret = 100
+    elif jecBinMinAbsEtaX10Int == 45:
+        if jecBinVals[2] >= 40:
+            ret = 60
+        else:
+            ret = 80
 
     return ret
 
@@ -915,12 +1026,14 @@ if __name__ == '__main__':
              'legNColumns': _plotConfig.legNColumns,
              'outputs': [OUTDIR+'/'+_plotConfig.outputName+'.'+_tmp for _tmp in EXTS],
              'addLogX': _plotConfig.addLogX,
+             'addLogXY': _plotConfig.addLogXY,
              'ratio': _plotConfig.ratio,
              'logX': _plotConfig.logX,
              'logY': _plotConfig.logY,
              'xMin': _plotConfig.xMin,
              'xMax': _plotConfig.xMax,
              'doFit': _plotConfig.doFit,
+             'doFit2': _plotConfig.doFit2,
              'xMinFit': _plotConfig.xMinFit,
              'xMaxFit': _plotConfig.xMaxFit,
              'yMin': _plotConfig.yMin,

@@ -236,6 +236,8 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
               binEdges_response,
               binEdges_pt);
 
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt", binEdges_pt, binEdges_pt);
+
       addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__E",
               binEdges_response,
               binEdges_E);
@@ -250,6 +252,8 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
                   matchLabel + "_E",
               binEdges_response,
               binEdges_E);
+
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E", binEdges_E, binEdges_E);
 
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E", binEdges_E);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt", binEdges_pt);
@@ -488,6 +492,8 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
            "overREC__vs__" + matchLabel + "_E")
             ->Fill(jetERatio2, jetMatchE, weight);
 
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E")->Fill(jetE, jetMatchE, weight);
+
         H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt_over" + matchLabel +
            "__vs__pt")
             ->Fill(jetPtRatio, jetPt, weight);
@@ -501,6 +507,8 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
         H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt_" + matchLabel +
            "overREC__vs__" + matchLabel + "_pt")
             ->Fill(jetPtRatio2, jetMatchPt, weight);
+
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt")->Fill(jetPt, jetMatchPt, weight);
 
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E")->Fill(jetE, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt")->Fill(jetPt, weight);
