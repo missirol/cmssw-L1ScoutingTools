@@ -203,6 +203,12 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
         XMIN_FIT = xMinFit if xMinFit else XMIN
         XMAX_FIT = xMaxFit if xMaxFit else XMAX
 
+        if doFit2:
+            xMaxFit_new = get_xyminmax_from_graph(h0)[2]
+            xMaxFit_new = int(xMaxFit_new / 10) * 10 + 10
+            if xMaxFit_new < XMAX_FIT:
+                XMAX_FIT = xMaxFit_new
+
         for fitf_i in fit_funcs:
             fitf = ROOT.TF1('fitf', fitf_i[1], fitf_i[0], XMIN_FIT, XMAX_FIT)
             fitf.SetRange(XMIN_FIT, XMAX_FIT)
@@ -263,6 +269,21 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
            tf1_tmp.Draw('l,same')
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
+
+           if XMIN_FIT > XMIN:
+               if doFit2:
+                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'max(0., pol1)', XMIN, XMIN_FIT)
+                   tfMin_tmp.SetParameter(0, 0)
+                   tfMin_tmp.SetParameter(1, tf1.Eval(XMIN_FIT) / XMIN_FIT)
+               else:
+                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'pol0', XMIN, XMIN_FIT)
+                   tfMin_tmp.SetParameter(0, tf1.Eval(XMIN_FIT))
+               tfMin_tmp.SetRange(XMIN, XMIN_FIT)
+               tfMin_tmp.SetLineWidth(tf1.GetLineWidth())
+               tfMin_tmp.SetLineColor(tf1.GetLineColor())
+               tfMin_tmp.SetLineStyle(1)
+               tfMin_tmp.Draw('l,same')
+
            if XMAX_FIT < XMAX:
                if doFit2:
                    tfMax_tmp = ROOT.TF1('tfMax_tmp', 'max(0., pol1)', XMAX_FIT, XMAX)
@@ -330,6 +351,21 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
            tf1_tmp.Draw('l,same')
            tf1.SetRange(XMIN_FIT, XMAX_FIT)
            tf1.Draw('l,same')
+
+           if XMIN_FIT > XMIN:
+               if doFit2:
+                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'max(0., pol1)', XMIN, XMIN_FIT)
+                   tfMin_tmp.SetParameter(0, 0)
+                   tfMin_tmp.SetParameter(1, tf1.Eval(XMIN_FIT) / XMIN_FIT)
+               else:
+                   tfMin_tmp = ROOT.TF1('tfMin_tmp', 'pol0', XMIN, XMIN_FIT)
+                   tfMin_tmp.SetParameter(0, tf1.Eval(XMIN_FIT))
+               tfMin_tmp.SetRange(XMIN, XMIN_FIT)
+               tfMin_tmp.SetLineWidth(tf1.GetLineWidth())
+               tfMin_tmp.SetLineColor(tf1.GetLineColor())
+               tfMin_tmp.SetLineStyle(1)
+               tfMin_tmp.Draw('l,same')
+
            if XMAX_FIT < XMAX:
                if doFit2:
                    tfMax_tmp = ROOT.TF1('tfMax_tmp', 'max(0., pol1)', XMAX_FIT, XMAX)
@@ -454,9 +490,9 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        h21.GetYaxis().SetTitle('Data / Fit')
        h21.GetYaxis().CenterTitle()
        h21.GetXaxis().SetTitleSize(h21.GetXaxis().GetTitleSize()/(1-pad1H))
-       h21.GetYaxis().SetTitleSize(h21.GetYaxis().GetTitleSize()/(1-pad1H) * 0.90)
+       h21.GetYaxis().SetTitleSize(h21.GetYaxis().GetTitleSize()/(1-pad1H) * 0.85)
        h21.GetXaxis().SetTitleOffset(h21.GetXaxis().GetTitleOffset())
-       h21.GetYaxis().SetTitleOffset(h21.GetYaxis().GetTitleOffset()*(1-pad1H))
+       h21.GetYaxis().SetTitleOffset(h21.GetYaxis().GetTitleOffset()*(1-pad1H) * 1.15)
        h21.GetXaxis().SetLabelSize(h21.GetYaxis().GetLabelSize()/(1-pad1H))
        h21.GetYaxis().SetLabelSize(h21.GetYaxis().GetLabelSize()/(1-pad1H))
        h21.GetXaxis().SetTickLength(h21.GetXaxis().GetTickLength()/(1-pad1H))
@@ -525,11 +561,10 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
         output_dirname = os.path.dirname(output_file)
         if not os.path.isdir(output_dirname):
            EXE('mkdir -p '+output_dirname)
-
-        canvas.SetName(os.path.splitext(output_file)[0])
-        canvas.SaveAs(output_file)
-
-        print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file))
+        output_file_rel = os.path.relpath(output_file)
+        canvas.SetName(os.path.splitext(output_file_rel)[0])
+        canvas.SaveAs(output_file_rel)
+        print(colored_text('[output]', ['1', '92']), output_file_rel)
 
     if addLogX or addLogXY:
         if ratio:
@@ -545,9 +580,9 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
         output_file_postfix = 'logXY' if addLogXY else 'logX'
 
         for output_file in outputs:
-            output_file_logX = f'_{output_file_postfix}.'.join(output_file.rsplit('.', 1))
-            canvas.SaveAs(output_file_logX)
-            print(colored_text('[output]', ['1', '92']), os.path.relpath(output_file_logX))
+            output_file_rel = os.path.relpath(f'_{output_file_postfix}.'.join(output_file.rsplit('.', 1)))
+            canvas.SaveAs(output_file_rel)
+            print(colored_text('[output]', ['1', '92']), output_file_rel)
 
     canvas.Close()
 
@@ -637,8 +672,8 @@ def getPlotLabels(key, keyword):
     # special case: 2D histogram converted to
     # the "inverted" profile of the X-median value
     if key.endswith('_pt__vs__GEN_pt'):
-       _titleX = 'Jet p_{T} (median) [GeV]'
-       _titleY = 'GEN Jet p_{T} (bin center) [GeV]'
+        _titleX = 'Jet p_{T}#scale[0.8]{(median)} [GeV]'
+        _titleY = 'GEN Jet p_{T}#scale[0.8]{(bin center)} [GeV]'
 
     return _titleX, _titleY, _jetLabel, _selLabel
 
@@ -752,7 +787,7 @@ def getPlotConfig(key, keyword, inputList):
            cfg.yMin = -1.1
            cfg.yMax = 4.4
        elif cfg.doFit2:
-           cfg.xMinFit = 1
+           cfg.xMinFit = 5
            cfg.xMaxFit = fit2PtMax(key_basename)
            cfg.xMin = 1
            cfg.xMax = 600
@@ -764,7 +799,7 @@ def getPlotConfig(key, keyword, inputList):
        else:
            cfg.addLogX = True
 
-       cfg.ratio = doFit1
+       cfg.ratio = cfg.doFit
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
 
