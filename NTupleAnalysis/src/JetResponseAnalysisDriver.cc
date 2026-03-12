@@ -142,7 +142,7 @@ void JetResponseAnalysisDriver::analyze() {
 
   // AK4 Jets
   float const minAK4JetPt{1};
-  float const minAK4JetPtRef{7.5f};
+  float const minAK4JetPtRef{10};
   float const maxAK4JetDeltaRmatchRef{0.2};
 
   for (auto const& jetLabel : labelMap_jetAK4_) {
@@ -173,16 +173,22 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
     dirPrefix += "/";
   }
 
-  std::vector<float> binEdges_pt(131);
+  std::vector<float> binEdges_pt(121);
   for (uint idx = 0; idx < binEdges_pt.size(); ++idx) {
     if (idx == 0) {
       binEdges_pt[idx] = 1.f;
+    } else if (idx < 31) {
+      binEdges_pt[idx] = idx * 5.f;
     } else if (idx < 51) {
-      binEdges_pt[idx] = idx * 10.f;
-    } else if (idx < 101) {
-      binEdges_pt[idx] = 500.f + (idx - 50) * 20.f;
+      binEdges_pt[idx] = 150.f + (idx - 30) * 10.f;
+    } else if (idx < 81) {
+      binEdges_pt[idx] = 350.f + (idx - 50) * 20.f;
+    } else if (idx < 96) {
+      binEdges_pt[idx] = 950.f + (idx - 80) * 30.f;
+    } else if (idx < 108) {
+      binEdges_pt[idx] = 1400.f + (idx - 95) * 50.f;
     } else {
-      binEdges_pt[idx] = 1500.f + (idx - 100) * 50.f;
+      binEdges_pt[idx] = 2000.f + (idx - 107) * 100.f;
     }
   }
 
