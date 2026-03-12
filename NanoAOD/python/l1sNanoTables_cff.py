@@ -87,9 +87,14 @@ l1EmulAK4CTJet0Table = l1JetTable.clone(
     )
 )
 
-l1EmulAK4CTJet0CorrTable = l1EmulAK4CTJet0Table.clone(
-    src = 'l1sAK4CTJets0EmuCorr',
-    name = 'L1EmulAK4CTJet0Corr'
+l1EmulAK4CTJet0CorrBTable = l1EmulAK4CTJet0Table.clone(
+    src = 'l1sAK4CTJets0EmuCorrB',
+    name = 'L1EmulAK4CTJet0CorrB'
+)
+
+l1EmulAK4CTJet0CorrCTable = l1EmulAK4CTJet0Table.clone(
+    src = 'l1sAK4CTJets0EmuCorrC',
+    name = 'L1EmulAK4CTJet0CorrC'
 )
 
 l1EmulAK4CTJet1Table = l1EmulAK4CTJet0Table.clone(
@@ -112,6 +117,7 @@ l1EmulObjTablesTask = cms.Task(
     l1EmulJetTable,
     l1EmulEtSumTable,
     l1EmulAK4CTJet0Table,
-    l1EmulAK4CTJet0CorrTable,
+    l1EmulAK4CTJet0CorrBTable,
+    l1EmulAK4CTJet0CorrCTable,
     l1EmulAK4CTJet1Table,
 )

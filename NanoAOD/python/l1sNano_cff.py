@@ -4,7 +4,8 @@ from L1ScoutingTools.NanoAOD.l1sNanoTables_cff import *
 
 from L1ScoutingTools.Reconstruction.l1sCTMultAbsIEta4_cfi import l1sCTMultAbsIEta4
 from L1ScoutingTools.Reconstruction.l1sAK4CTJets0Emu_cfi import l1sAK4CTJets0Emu
-from L1ScoutingTools.Reconstruction.l1sAK4CTJets0EmuCorr_cfi import l1sAK4CTJets0EmuCorr
+from L1ScoutingTools.Reconstruction.l1sAK4CTJets0EmuCorrB_cfi import l1sAK4CTJets0EmuCorrB
+from L1ScoutingTools.Reconstruction.l1sAK4CTJets0EmuCorrC_cfi import l1sAK4CTJets0EmuCorrC
 from L1ScoutingTools.Reconstruction.l1sAK4CTJets1Emu_cfi import l1sAK4CTJets1Emu
 
 from PhysicsTools.NanoAOD.nano_cff import nanoMetadata
@@ -16,7 +17,8 @@ l1sNanoSequence = cms.Sequence(l1sNanoTask)
 l1EmulExtraObjsTask = cms.Task(
     l1sCTMultAbsIEta4,
     l1sAK4CTJets0Emu,
-    l1sAK4CTJets0EmuCorr,
+    l1sAK4CTJets0EmuCorrB,
+    l1sAK4CTJets0EmuCorrC,
     l1sAK4CTJets1Emu,
 )
 

@@ -18,9 +18,9 @@
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/FileInPath.h"
 
-class L1TCaloTowerJetCorrector : public edm::global::EDProducer<> {
+class L1TCaloTowerJetCorrectorB : public edm::global::EDProducer<> {
 public:
-  explicit L1TCaloTowerJetCorrector(edm::ParameterSet const&);
+  explicit L1TCaloTowerJetCorrectorB(edm::ParameterSet const&);
 
   static void fillDescriptions(edm::ConfigurationDescriptions&);
 
@@ -98,7 +98,7 @@ private:
   int const bxMax_;
 };
 
-L1TCaloTowerJetCorrector::L1TCaloTowerJetCorrector(edm::ParameterSet const& iConfig)
+L1TCaloTowerJetCorrectorB::L1TCaloTowerJetCorrectorB(edm::ParameterSet const& iConfig)
     : srcToken_{consumes(iConfig.getParameter<edm::InputTag>("src"))},
       puProxyToken_{consumes(iConfig.getParameter<edm::InputTag>("puProxy"))},
       jetCorrector_{iConfig.getParameter<edm::FileInPath>("jecFile").fullPath()},
@@ -107,7 +107,7 @@ L1TCaloTowerJetCorrector::L1TCaloTowerJetCorrector(edm::ParameterSet const& iCon
   produces<l1t::JetBxCollection>();
 }
 
-void L1TCaloTowerJetCorrector::produce(edm::StreamID, edm::Event& iEvent, edm::EventSetup const&) const {
+void L1TCaloTowerJetCorrectorB::produce(edm::StreamID, edm::Event& iEvent, edm::EventSetup const&) const {
   auto const& inputs = iEvent.get(srcToken_);
 
   auto const& puProxy = iEvent.get(puProxyToken_);
@@ -126,16 +126,16 @@ void L1TCaloTowerJetCorrector::produce(edm::StreamID, edm::Event& iEvent, edm::E
       auto jet = inputs.at(bx, idx);
       auto const corr{jetCorrector_.correction(jet.pt(), jet.eta(), puProxy)};
 
-      LogTrace("L1TCaloTowerJetCorrector")
-          << "[L1TCaloTowerJetCorrector] Jet(bx=" << bx << ", index=" << idx << ") (PU proxy = " << puProxy << ")";
+      LogTrace("L1TCaloTowerJetCorrectorB")
+          << "[L1TCaloTowerJetCorrectorB] Jet(bx=" << bx << ", index=" << idx << ") (PU proxy = " << puProxy << ")";
 
-      LogTrace("L1TCaloTowerJetCorrector")
-          << "[L1TCaloTowerJetCorrector]    Pre -JESC: eta=" << jet.eta() << " phi=" << jet.phi()
+      LogTrace("L1TCaloTowerJetCorrectorB")
+          << "[L1TCaloTowerJetCorrectorB]    Pre -JESC: eta=" << jet.eta() << " phi=" << jet.phi()
           << " pT(uncorrected)=" << jet.pt() << " JESC=" << corr;
 
       jet.setP4(jet.p4() * corr);
 
-      LogTrace("L1TCaloTowerJetCorrector") << "[L1TCaloTowerJetCorrector]    Post-JESC: eta=" << jet.eta()
+      LogTrace("L1TCaloTowerJetCorrectorB") << "[L1TCaloTowerJetCorrectorB]    Post-JESC: eta=" << jet.eta()
                                            << " phi=" << jet.phi() << " pT(corrected)=" << jet.pt();
 
       if (corr > 0) {
@@ -157,7 +157,7 @@ void L1TCaloTowerJetCorrector::produce(edm::StreamID, edm::Event& iEvent, edm::E
   iEvent.put(std::move(output));
 }
 
-void L1TCaloTowerJetCorrector::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void L1TCaloTowerJetCorrectorB::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
   desc.add<edm::InputTag>("src")->setComment("Input product for jets (type: l1t::JetBxCollection)");
@@ -166,8 +166,8 @@ void L1TCaloTowerJetCorrector::fillDescriptions(edm::ConfigurationDescriptions& 
   desc.add<int>("bxMin", -2)->setComment("Min BX (inclusive)");
   desc.add<int>("bxMax", 2)->setComment("Max BX (inclusive)");
 
-  descriptions.add("l1tCaloTowerJetCorrector", desc);
+  descriptions.addDefault(desc);
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(L1TCaloTowerJetCorrector);
+DEFINE_FWK_MODULE(L1TCaloTowerJetCorrectorB);
