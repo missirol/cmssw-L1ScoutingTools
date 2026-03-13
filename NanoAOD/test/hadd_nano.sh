@@ -1,19 +1,40 @@
 #!/bin/bash -ex
 
-inpdir=output_l1sNTuple_260301
-sampleName=Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120
+if [ $# -ne 3 ]; then
+  printf "%s\n" "ERROR - invalid command-line arguments (must be exactly 3 strings) !"
+  printf "%s\n" "        [1] Path to input directory."
+  printf "%s\n" "        [2] Label of the data set (name of the input subdirectory)."
+  printf "%s\n" "        [3] Path to output directory."
+  exit 1
+fi
+
+inpdir="${1}"
+datasetLabel="${2}"
+outdir="${3}"
+
+mkdir -p "${outdir}"
 
 for nnn in {0..4}; do
-  haddnano.py \
-    "${inpdir}"/"${sampleName}"_"${nnn}".root \
-    "${inpdir}"/"${sampleName}"/job_"${nnn}"*/*root
+  outFile="${outdir}"/"${datasetLabel}"_"${nnn}".root
 
-  rm -rf "${inpdir}"/"${sampleName}"/job_"${nnn}"*/
+  if [ -f "${outFile}" ]; then
+    printf "%s\n" "ERROR - target output file already exists: ${outFile}"
+    exit 1
+  fi
+
+  haddnano.py "${outFile}" "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/*root
+
+  rm -rf "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/
 done
 unset nnn
 
-haddnano.py \
-  "${inpdir}"/"${sampleName}".root \
-  "${inpdir}"/"${sampleName}"_*.root
+outFile="${outdir}"/"${datasetLabel}".root
 
-rm -f "${inpdir}"/"${sampleName}"_*.root
+if [ -f "${outFile}" ]; then
+  printf "%s\n" "ERROR - target output file already exists: ${outFile}"
+  exit 1
+fi
+
+haddnano.py "${outFile}" "${outdir}"/"${datasetLabel}"_*.root
+
+rm -f "${outdir}"/"${datasetLabel}"_*.root

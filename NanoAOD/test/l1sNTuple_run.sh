@@ -10,10 +10,10 @@ NEVT=5000000
 
 if [ $# -eq 1 ]; then
   ODIR=${1}
-#  ODIR_cmsRun=$1
+  ODIR_CMSRUN=$1
 else
   ODIR=${1}
-#  ODIR_cmsRun=${2}
+  ODIR_CMSRUN=${2}
 fi
 
 if [ -d ${ODIR} ]; then
@@ -24,10 +24,11 @@ fi
 declare -A samplesMap
 
 # QCD Pt-Flat
+samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-EpsilonPU_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-FlatPU0to120_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
 
-# options (JobFlavour and AccountingGroup)
-opts="--JobFlavour microcentury"
+# Options for job submission (e.g. JobFlavour)
+bdriver_opts="--JobFlavour microcentury"
 
 COMMON_OPTS=" --filein tmp.root"
 COMMON_OPTS+=" --mc --conditions auto:phase1_2025_realistic --geometry DB:Extended"
@@ -56,11 +57,12 @@ for sampleKey in ${!samplesMap[@]}; do
   # number of events per sample
   numEvents=${NEVT}
 
-  bdriver -c "${JOB_LABEL}"_cfg_dump.py --customize-cfg -m ${numEvents} -n 1000 --cpus 8 --mem 1000 --time 600 ${opts} \
-    -d ${sampleName} -p 0 -o ${ODIR}/${sampleKey}
+  bdriver -c "${JOB_LABEL}"_cfg_dump.py --customize-cfg ${bdriver_opts} \
+    -m ${numEvents} -n 1000 --cpus 8 --mem 1000 --time 600 \
+    -d ${sampleName} -p 0 -o ${ODIR}/${sampleKey} --output-dir-cmsRun ${ODIR_CMSRUN}/${sampleKey}
 done
 unset sampleKey numEvents sampleName
 
 rm -f "${JOB_LABEL}"_cfg_dump.py
 
-unset opts samplesMap NEVT ODIR #ODIR_cmsRun
+unset opts samplesMap NEVT ODIR ODIR_CMSRUN
