@@ -9,5 +9,5 @@ l1sAK4CTJets1Emu = L1TCaloTowerAKJetProducer(
     towerMinHwPt = 1,
     towerMaxHwPt = 508,
     rParam = 0.4,
-    jetPtMin = 5
+    jetPtMin = 1
 )
