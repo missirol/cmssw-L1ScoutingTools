@@ -28,8 +28,11 @@ if __name__ == '__main__':
    parser.add_argument('-d', '--dataset', dest='dataset', action='store', default=None, required=True,
                        help='name of input data set in DAS')
 
-   parser.add_argument('-o', '--output', dest='output', action='store', default=None, required=True,
+   parser.add_argument('-o', '--output-dir', dest='output_dir', action='store', default=None, required=True,
                        help='path to output directory')
+
+   parser.add_argument('--output-dir-cmsRun', dest='output_dir_cmsRun', action='store', default=None,
+                       help='path to directory for cmsRun outputs (if not specified, this will correspond to "output-dir")')
 
    parser.add_argument('--customize-cfg', dest='customize_cfg', action='store_true', default=False,
                        help='append minimal customization to cmsRun-cfg required by the driver')
@@ -100,10 +103,18 @@ if __name__ == '__main__':
    if not os.path.isfile(opts.cmsRun_cfg):
      KILL(log_prx+'invalid path to cmsRun cfg file [-c]: '+str(opts.cmsRun_cfg))
 
-   if os.path.exists(opts.output):
-     KILL(log_prx+'target path to output directory already exists [-o]: '+str(opts.output))
+   if os.path.exists(opts.output_dir):
+     KILL(log_prx+'target path to output directory already exists [-o]: '+str(opts.output_dir))
 
-   OUTPUT_DIR = os.path.abspath(opts.output)
+   OUTPUT_DIR = os.path.abspath(opts.output_dir)
+
+   OUTPUT_DIR_CMSRUN = opts.output_dir_cmsRun
+   if OUTPUT_DIR_CMSRUN is None:
+       OUTPUT_DIR_CMSRUN = OUTPUT_DIR
+   else:
+       if os.path.exists(OUTPUT_DIR_CMSRUN):
+           KILL(log_prx+f'target path to directory for cmsRun outputs already exists [--output-dir-cmsRun]: {OUTPUT_DIR_CMSRUN}')
+       OUTPUT_DIR_CMSRUN = os.path.abspath(OUTPUT_DIR_CMSRUN)
 
    if opts.n_events == 0:
      KILL(log_prx+'logic error: requesting zero events per job (use non-zero value for argument of option "-n")')
@@ -217,6 +228,7 @@ if __name__ == '__main__':
        OUTPUT_DIR += 'x'
 
    MKDIRP(OUTPUT_DIR, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+   MKDIRP(OUTPUT_DIR_CMSRUN, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
 
    if opts.batch_system == 'htc':
      EXE('cp '+voms_proxy_path+' '+OUTPUT_DIR+'/X509_USER_PROXY', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
@@ -257,6 +269,13 @@ process.source.fileNames = opts.inputFiles
 
 # input EDM files [secondary]
 process.source.secondaryFileNames = opts.secondaryInputFiles
+
+# output EDM file
+if len(process.outputModules_()) != 1:
+    raise SystemExit(f'Fatal Error - unexpected number of OutputModules (must be 1): ' + str(len(process.outputModules_())))
+
+for outModLabel, outMod in process.outputModules_().items():
+    outMod.fileName = opts.output
 """
        if opts.customise_commands: custom_str += '\n'+'\n'.join(opts.customise_commands)+'\n'
        cfg_file.write(custom_str.format(os.path.basename(__file__), str(datetime.datetime.now())))
@@ -466,7 +485,7 @@ process.source.secondaryFileNames = opts.secondaryInputFiles
              cmsRun_opts += ' \\\n inputFiles='+str(i_inputFile)
              if i_secondaryInputFiles:
                cmsRun_opts += ' \\\n secondaryInputFiles='+str(','.join(i_secondaryInputFiles))
-             cmsRun_opts += ' \\\n output=./out'+outputname_postfix_format.format(jobCounter)+'.root'
+             cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out'+outputname_postfix_format.format(jobCounter)+'.root'
 
              for _tmp in cmsRun_addopts:
                cmsRun_opts += ' \\\n '+str(_tmp)
