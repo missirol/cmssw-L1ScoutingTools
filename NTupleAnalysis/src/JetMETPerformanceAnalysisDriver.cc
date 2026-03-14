@@ -21,11 +21,11 @@ void JetMETPerformanceAnalysisDriver::init() {
   jecA_.init(getOption("jecA_filePath"));
 
   jetCategoryLabels_ = {
-      "_EtaIncl",  "_EtaInclPt500", //"_EtaInclPt0", "_EtaInclPt1", "_EtaInclPt2", "_EtaInclPt3", "_EtaInclPt4", "_EtaInclPt5",
-      "_Eta2p5",   "_Eta2p5Pt500",  //"_Eta2p5Pt0",  "_Eta2p5Pt1",  "_Eta2p5Pt2",  "_Eta2p5Pt3",  "_Eta2p5Pt4",  "_Eta2p5Pt5",
-      "_HB",       "_HBPt500",      //"_HBPt0",      "_HBPt1",      "_HBPt2",      "_HBPt3",      "_HBPt4",      "_HBPt5",
-      "_HE",       "_HEPt500",      //"_HEPt0",      "_HEPt1",      "_HEPt2",      "_HEPt3",      "_HEPt4",      "_HEPt5",
-      "_HF",       "_HFPt500",      //"_HFPt0",      "_HFPt1",      "_HFPt2",      "_HFPt3",      "_HFPt4",      "_HFPt5",
+      "_EtaIncl",  "_EtaInclPt300", //"_EtaInclPt0", "_EtaInclPt1", "_EtaInclPt2", "_EtaInclPt3", "_EtaInclPt4", "_EtaInclPt5",
+      "_Eta2p5",   "_Eta2p5Pt300",  //"_Eta2p5Pt0",  "_Eta2p5Pt1",  "_Eta2p5Pt2",  "_Eta2p5Pt3",  "_Eta2p5Pt4",  "_Eta2p5Pt5",
+      "_HB",       "_HBPt300",      //"_HBPt0",      "_HBPt1",      "_HBPt2",      "_HBPt3",      "_HBPt4",      "_HBPt5",
+      "_HE",       "_HEPt300",      //"_HEPt0",      "_HEPt1",      "_HEPt2",      "_HEPt3",      "_HEPt4",      "_HEPt5",
+      "_HF",       "_HFPt300",      //"_HFPt0",      "_HFPt1",      "_HFPt2",      "_HFPt3",      "_HFPt4",      "_HFPt5",
   };
 
   // histogram: events counter
@@ -38,21 +38,24 @@ void JetMETPerformanceAnalysisDriver::init() {
   addTH2D("nPU__vs__nCTie4", 40, 0, 120, 48, 0, 240);
 
   labelMap_jetAK4_ = {
-      {"GenJet", {}},
+//      {"GenJet", {}},
       {"GenJetNoMu",
        {{"L1T", "L1EmulJet"},
-        {"L1T1", "L1EmulJet1"},
+//        {"L1T1", "L1EmulJet1"},
         {"L1CT0", "L1EmulAK4CTJet0"},
-        {"L1CT0Corr", "L1EmulAK4CTJet0Corr"},
         {"L1CT0CorrA", "L1EmulAK4CTJet0CorrA"},
-        {"L1CT1", "L1EmulAK4CTJet1"}}},
+        {"L1CT0CorrB", "L1EmulAK4CTJet0CorrB"},
+        {"L1CT0CorrC", "L1EmulAK4CTJet0CorrC"},
+//        {"L1CT1", "L1EmulAK4CTJet1"},
+      }},
       {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+//      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
-      {"L1EmulAK4CTJet0Corr", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
       {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
-      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
-      {"Jet", {}},
+      {"L1EmulAK4CTJet0CorrB", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+      {"L1EmulAK4CTJet0CorrC", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+//      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+//      {"Jet", {}},
   };
 
   labelMap_jetAK8_ = {};
@@ -103,8 +106,8 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
   bool ret{false};
   if (categLabel == "_EtaIncl") {
     ret = (jetAbsEta < 5.0);
-  } else if (categLabel == "_EtaInclPt500") {
-    ret = (jetAbsEta < 5.0) and (jetPt < 500.);
+  } else if (categLabel == "_EtaInclPt300") {
+    ret = (jetAbsEta < 5.0) and (jetPt < 300.);
   } else if (categLabel == "_EtaInclPt0") {
     ret = (jetAbsEta < 5.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_EtaInclPt1") {
@@ -121,8 +124,8 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
 
   else if (categLabel == "_Eta2p5") {
     ret = (jetAbsEta < 2.5);
-  } else if (categLabel == "_Eta2p5Pt500") {
-    ret = (jetAbsEta < 2.5) and (jetPt < 500.);
+  } else if (categLabel == "_Eta2p5Pt300") {
+    ret = (jetAbsEta < 2.5) and (jetPt < 300.);
   } else if (categLabel == "_Eta2p5Pt0") {
     ret = (jetAbsEta < 2.5) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_Eta2p5Pt1") {
@@ -139,8 +142,8 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
 
   else if (categLabel == "_HB") {
     ret = (jetAbsEta < 1.3);
-  } else if (categLabel == "_HBPt500") {
-    ret = (jetAbsEta < 1.3) and (jetPt < 500.);
+  } else if (categLabel == "_HBPt300") {
+    ret = (jetAbsEta < 1.3) and (jetPt < 300.);
   } else if (categLabel == "_HBPt0") {
     ret = (jetAbsEta < 1.3) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HBPt1") {
@@ -157,8 +160,8 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
 
   else if (categLabel == "_HE") {
     ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0);
-  } else if (categLabel == "_HEPt500") {
-    ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (jetPt < 500.);
+  } else if (categLabel == "_HEPt300") {
+    ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (jetPt < 300.);
   } else if (categLabel == "_HEPt0") {
     ret = (1.3 <= jetAbsEta) and (jetAbsEta < 3.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HEPt1") {
@@ -175,8 +178,8 @@ bool JetMETPerformanceAnalysisDriver::jetBelongsToCategory(const std::string& ca
 
   else if (categLabel == "_HF") {
     ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0);
-  } else if (categLabel == "_HFPt500") {
-    ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (jetPt < 500.);
+  } else if (categLabel == "_HFPt300") {
+    ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (jetPt < 300.);
   } else if (categLabel == "_HFPt0") {
     ret = (3.0 <= jetAbsEta) and (jetAbsEta < 5.0) and (20. <= jetPt) and (jetPt < 60.);
   } else if (categLabel == "_HFPt1") {

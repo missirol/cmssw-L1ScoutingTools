@@ -94,9 +94,10 @@ def medianProfileGraph(th2, profile_mean_stats_per_bin=10):
     return ret
 
 def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
-    addLogX=False, addLogXY=False, doFit=False, doFit2=False, ratio=False, ratioPadFrac=0.3,
+    addLogX=False, addLogXY=False, logX=False, logY=False, ratio=False, ratioPadFrac=0.3,
+    doFit=False, fitFuncs=False, fitAutoXMin=False, fitAutoXMax=False, fitExtPol1=False,
     xMin=None, xMax=None, yMin=None, yMax=None, xMinFit=None, xMaxFit=None, yMinRatio=None, yMaxRatio=None,
-    logX=False, logY=False, autoRangeX=False, xLabelSize=None, xBinLabels=None):
+    autoRangeX=False, xLabelSize=None, xBinLabels=None):
 
     xyMinMax = []
     if histograms[0].th1.InheritsFrom('TGraph'):
@@ -120,17 +121,16 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
     canvas.SetTickx()
     canvas.SetTicky()
 
-    textPads = [
-        get_text(Lef+(1-Lef-Rig)*0.00, (1-Top)+Top*0.75, 11, .03, labels[0]),
-        get_text(Lef+(1-Lef-Rig)*0.00, (1-Top)+Top*0.45, 11, .03, labels[1]),
-        get_text(Lef+(1-Lef-Rig)*0.00, (1-Top)+Top*0.15, 11, .03, labels[2]),
-    ]
+    textPads = []
+    for labelIdx, labelVal in enumerate(labels):
+        textPads += [get_text(Lef+(1-Lef-Rig)*0.00, (1-Top)+Top*(0.75-0.30*labelIdx), 11, .03, labelVal)]
 
     leg = None
     if len(legXY) == 4:
        leg = ROOT.TLegend(legXY[0], legXY[1], legXY[2], legXY[3])
-       leg.SetBorderSize(2)
+       leg.SetBorderSize(1)
        leg.SetTextFont(42)
+       leg.SetTextSize(0.03)
        leg.SetFillColor(0)
        leg.SetNColumns(legNColumns)
        for _tmp in histograms:
@@ -190,20 +190,18 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
         tfitres = None
         minChi2OverNdof = -1
 
-        fit_funcs = []
-        if doFit2:
-            fit_funcs += [(4, '[0]+[1]*x+[2]*x^2+[3]*log(x)')]
-            fit_funcs += [(3, '[0]+[1]*x+[2]*x^2')]
-            fit_funcs += [(2, '[0]+[1]*x')]
-        else:
-            fit_funcs += [(4, '[0]+[1]*(x/1000)+[2]*(x/1000)^2+[3]*log(x)')]
-            fit_funcs += [(3, '[0]+[1]*(x/1000)+[2]*(x/1000)^2')]
-            fit_funcs += [(2, '[0]+[1]*(x/1000)')]
+        fit_funcs = fitFuncs[:]
 
         XMIN_FIT = xMinFit if xMinFit else XMIN
         XMAX_FIT = xMaxFit if xMaxFit else XMAX
 
-        if doFit2:
+        if fitAutoXMin:
+            xMinFit_new = get_xyminmax_from_graph(h0)[0]
+            xMinFit_new = (int(xMinFit_new / 10) * 10) if xMinFit_new > 10 else (int(xMinFit_new) - 1)
+            if xMinFit_new > XMIN_FIT:
+                XMIN_FIT = xMinFit_new
+
+        if fitAutoXMax:
             xMaxFit_new = get_xyminmax_from_graph(h0)[2]
             xMaxFit_new = int(xMaxFit_new / 10) * 10 + 10
             if xMaxFit_new < XMAX_FIT:
@@ -263,16 +261,17 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        canvas.SetLogy(logY)
 
        if tf1:
-           tf1.SetRange(XMIN, XMAX)
-           tf1.SetLineStyle(2)
-           tf1.Draw('l,same')
+           tf1_draw = tf1.Clone()
+           tf1_draw.SetRange(XMIN, XMAX)
+           tf1_draw.SetLineStyle(2)
+           tf1_draw.Draw('l,same')
            tf1_ext_func0 = f'({tf1.GetFormula().GetTitle()}) * (x > {XMIN_FIT}) * (x < {XMAX_FIT})'
-           tf1_ext_func0 += f' + (x <= {XMIN_FIT}) * [{0 + fitf.GetNpar()}]' + ' * x' * doFit2
-           tf1_ext_func0 += f' + (x >= {XMAX_FIT}) * [{1 + fitf.GetNpar()}]' + ' * x' * doFit2
+           tf1_ext_func0 += f' + (x <= {XMIN_FIT}) * [{0 + fitf.GetNpar()}]' + ' * x' * fitExtPol1
+           tf1_ext_func0 += f' + (x >= {XMAX_FIT}) * [{1 + fitf.GetNpar()}]' + ' * x' * fitExtPol1
            tf1_ext = ROOT.TF1('tf1_ext', f'max(0., {tf1_ext_func0})', XMIN, XMAX)
            for fitf_paramIdx in range(tf1.GetNpar()):
                tf1_ext.SetParameter(fitf_paramIdx, tf1.GetParameter(fitf_paramIdx))
-           if doFit2:
+           if fitExtPol1:
                tf1_ext.SetParameter(0 + fitf.GetNpar(), tf1.Eval(XMIN_FIT) / XMIN_FIT)
                tf1_ext.SetParameter(1 + fitf.GetNpar(), tf1.Eval(XMAX_FIT) / XMAX_FIT)
            else:
@@ -331,16 +330,17 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        h0 = pad1.DrawFrame(XMIN, YMIN, XMAX, YMAX)
 
        if tf1:
-           tf1.SetRange(XMIN, XMAX)
-           tf1.SetLineStyle(2)
-           tf1.Draw('l,same')
+           tf1_draw = tf1.Clone()
+           tf1_draw.SetRange(XMIN, XMAX)
+           tf1_draw.SetLineStyle(2)
+           tf1_draw.Draw('l,same')
            tf1_ext_func0 = f'({tf1.GetFormula().GetTitle()}) * (x > {XMIN_FIT}) * (x < {XMAX_FIT})'
-           tf1_ext_func0 += f' + (x <= {XMIN_FIT}) * [{0 + fitf.GetNpar()}]' + ' * x' * doFit2
-           tf1_ext_func0 += f' + (x >= {XMAX_FIT}) * [{1 + fitf.GetNpar()}]' + ' * x' * doFit2
+           tf1_ext_func0 += f' + (x <= {XMIN_FIT}) * [{0 + fitf.GetNpar()}]' + ' * x' * fitExtPol1
+           tf1_ext_func0 += f' + (x >= {XMAX_FIT}) * [{1 + fitf.GetNpar()}]' + ' * x' * fitExtPol1
            tf1_ext = ROOT.TF1('tf1_ext', f'max(0., {tf1_ext_func0})', XMIN, XMAX)
            for fitf_paramIdx in range(tf1.GetNpar()):
                tf1_ext.SetParameter(fitf_paramIdx, tf1.GetParameter(fitf_paramIdx))
-           if doFit2:
+           if fitExtPol1:
                tf1_ext.SetParameter(0 + fitf.GetNpar(), tf1.Eval(XMIN_FIT) / XMIN_FIT)
                tf1_ext.SetParameter(1 + fitf.GetNpar(), tf1.Eval(XMAX_FIT) / XMAX_FIT)
            else:
@@ -662,10 +662,16 @@ class PlotConfig:
         self.titleY = ''
         self.jetLabel = ''
         self.selLabel = ''
-        self.legXY = [0.75, 0.60, 0.95, 0.90]
+        self.labels = []
+        self.legXY = []
         self.legNColumns = 1
         self.xMin = None
         self.xMax = None
+        self.doFit = False
+        self.fitFuncs = []
+        self.fitAutoXMin = False
+        self.fitAutoXMax = False
+        self.fitExtPol1 = False
         self.xMinFit = None
         self.xMaxFit = None
         self.yMin = None
@@ -724,7 +730,7 @@ def getHistogram(key, inputDict, plotCfg, **kwargs):
 
     return hist0
 
-def getPlotConfig(key, keyword, inputList):
+def getPlotConfig(key, keyword, inputList, sampleLabel):
 
     cfg = PlotConfig()
 
@@ -743,37 +749,60 @@ def getPlotConfig(key, keyword, inputList):
 
     cfg.hists = []
 
-    if keyword == 'l1s_run3_jecFits':
+    ##
+    ## Jet-Energy-Scale-Correction Fits (Methods #1 and #2)
+    ##
+    if keyword in ['l1s_run3_jecFitsMethod1', 'l1s_run3_jecFitsMethod2']:
 
-       cfg.autoRangeX = False
+       if keyword == 'l1s_run3_jecFitsMethod1':
+           cfg.doFit = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
 
-       doFit1 = key_basename.endswith('pt_GENoverREC_Median_wrt_pt')
-       cfg.doFit2 = key_basename.endswith('pt__vs__GEN_pt')
-       cfg.doFit = doFit1 or cfg.doFit2
+           cfg.fitFuncs = [
+               (4, '[0]+[1]*(x/1000)+[2]*(x/1000)^2+[3]*log(x)'),
+               (3, '[0]+[1]*(x/1000)+[2]*(x/1000)^2'),
+               (2, '[0]+[1]*(x/1000)'),
+           ]
 
-       if doFit1:
+           cfg.fitAutoXMax = False
+           cfg.fitExtPol1 = False
+
            cfg.xMinFit = 1
            cfg.xMaxFit = fit1PtMax(key_basename)
            cfg.xMin = 1
            cfg.xMax = 600
            cfg.yMin = -1.1
            cfg.yMax = 4.4
-       elif cfg.doFit2:
-           cfg.xMinFit = 5
+
+           cfg.addLogX = True
+       else:
+           cfg.doFit = key_basename.endswith('pt__vs__GEN_pt')
+
+           cfg.fitFuncs = [
+               (4, '[0]+[1]*x+[2]*x^2+[3]*log(x)'),
+               (3, '[0]+[1]*x+[2]*x^2'),
+               (2, '[0]+[1]*x'),
+           ]
+
+           cfg.fitAutoXMin = True
+           cfg.fitAutoXMax = True
+           cfg.fitExtPol1 = True
+
+           cfg.xMinFit = 1
            cfg.xMaxFit = fit2PtMax(key_basename)
            cfg.xMin = 1
            cfg.xMax = 600
            cfg.yMin = 1
            cfg.yMax = 600
 
-       if cfg.doFit2:
            cfg.addLogXY = True
-       else:
-           cfg.addLogX = True
+
+       cfg.labels = [f'Sample: {sampleLabel}', f'Jets: {cfg.jetLabel}', f'Selection: {cfg.selLabel}']
 
        cfg.ratio = cfg.doFit
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
+
+       cfg.autoRangeX = False
 
        hcolor = ROOT.kBlack
        if 'nCTie4'+'010' in key:
@@ -789,17 +818,46 @@ def getPlotConfig(key, keyword, inputList):
        elif 'nCTie4'+'080' in key:
            hcolor = ROOT.kRed
 
-       key_basename = os.path.basename(key)
-
-       if key_basename.split('_')[0] in ['L1EmulAK4CTJet0', 'L1EmulAK4CTJet0CorrA', 'L1EmulAK4CTJet0Corr']:
+       if cfg.doFit and key_basename.split('_')[0] in ['L1EmulAK4CTJet0']:
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key, Legend='', Color=hcolor)]
+
+    ##
+    ## Jet-Energy-Scale-Correction Closure Plots
+    ##
+    elif keyword == 'l1s_run3_jecClosurePlots':
+
+       cfg.labels = [f'Sample: {sampleLabel}', f'Selection: {cfg.selLabel}']
+
+       cfg.autoRangeX = False
+
+       cfg.xMin = 1
+       cfg.xMax = 300
+       cfg.yMin = -0.4
+       cfg.yMax = 3.5
+
+       cfg.addLogX = True
+
+       pt_profile = key.endswith('_wrt_GEN_pt') or key.endswith('_wrt_pt')
+
+       jetCollPrefix = 'L1EmulAK4CTJet0_'
+
+       if pt_profile and jetCollPrefix in key:
+           for idx, inp in enumerate(inputList):
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulJet_'), Legend='L1T Jets (corr.)', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0_'), Legend='CaloTowerJets (Uncorr.)', Color=ROOT.kGray+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrC_'), Legend='CaloTowerJets (Corr-C)', Color=ROOT.kBlue) if idx==0 else None]
+
+       cfg.legNColumns = len(list(filter(None, cfg.hists)))
+       cfg.legXY = [0.15, 0.85+0.005, 0.96, 0.85+0.045]
 
     ##
     ## Unknown keywords
     ##
     else:
-       KILL('getPlotConfig(key="'+key+'", keyword="'+keyword+'") -- invalid keyword: "'+keyword+'"')
+       KILL('getPlotConfig() -- invalid keyword: "'+keyword+'"')
 
     # remove None entries
     cfg.hists = list(filter(None, cfg.hists))
@@ -893,6 +951,9 @@ def fit2PtMax(hname):
     if jecBinMinAbsEtaX10Int == 0:
         if jecBinVals[2] == 0:
             ret = 110
+    elif jecBinMinAbsEtaX10Int == 10:
+        if jecBinVals[2] >= 80:
+            ret = 200
     elif jecBinMinAbsEtaX10Int == 25:
         if jecBinVals[2] >= 60:
             ret = 200
@@ -1021,7 +1082,7 @@ if __name__ == '__main__':
 
    for _hkey in th1Keys:
        for _keyw in KEYWORDS:
-           _plotConfig = getPlotConfig(key=_hkey, keyword=_keyw, inputList=inputList)
+           _plotConfig = getPlotConfig(key=_hkey, keyword=_keyw, inputList=inputList, sampleLabel=opts.label_sample)
            if _plotConfig is None:
                continue
 
@@ -1029,8 +1090,8 @@ if __name__ == '__main__':
            fitf = fitAndPlot(**{
              'histograms': _plotConfig.hists,
              'title': ';'+_plotConfig.titleX+';'+_plotConfig.titleY,
-             'labels': [f'Sample: {opts.label_sample}', f'Jets: {_plotConfig.jetLabel}', f'Selection: {_plotConfig.selLabel}'],
-             'legXY': [],
+             'labels': _plotConfig.labels,
+             'legXY': _plotConfig.legXY,
              'legNColumns': _plotConfig.legNColumns,
              'outputs': [OUTDIR+'/'+_plotConfig.outputName+'.'+_tmp for _tmp in EXTS],
              'addLogX': _plotConfig.addLogX,
@@ -1041,7 +1102,10 @@ if __name__ == '__main__':
              'xMin': _plotConfig.xMin,
              'xMax': _plotConfig.xMax,
              'doFit': _plotConfig.doFit,
-             'doFit2': _plotConfig.doFit2,
+             'fitFuncs': _plotConfig.fitFuncs,
+             'fitAutoXMin': _plotConfig.fitAutoXMin,
+             'fitAutoXMax': _plotConfig.fitAutoXMax,
+             'fitExtPol1': _plotConfig.fitExtPol1,
              'xMinFit': _plotConfig.xMinFit,
              'xMaxFit': _plotConfig.xMaxFit,
              'yMin': _plotConfig.yMin,
@@ -1064,8 +1128,8 @@ if __name__ == '__main__':
                jecOutputLinesDict[jecKey] = []
 
            jec_str = ''
-           jec_str += f'{_plotConfig.xMinFit:6.1f} '
-           jec_str += f'{_plotConfig.xMaxFit:6.1f} '
+           jec_str += f'{fitf.GetXmin():6.1f} '
+           jec_str += f'{fitf.GetXmax():6.1f} '
 
            jecBinVals = jecBinValues(key_basename)
            jec_str += f'{jecBinVals[0]:7.3f} '
