@@ -1,10 +1,13 @@
 #!/bin/bash -ex
 
 if [ $# -ne 3 ]; then
-  printf "%s\n" "ERROR - invalid command-line arguments (must be exactly 3 strings) !"
-  printf "%s\n" "        [1] Path to input directory."
-  printf "%s\n" "        [2] Label of the data set (name of the input subdirectory)."
-  printf "%s\n" "        [3] Path to output directory."
+  set +x
+  printf "\n"
+  printf "%s\n" ">>> ERROR - invalid command-line arguments (must be exactly 3 strings)."
+  printf "%s\n" "            [1] Path to input directory."
+  printf "%s\n" "            [2] Label of the data set (name of the input subdirectory)."
+  printf "%s\n" "            [3] Path to output directory."
+  printf "\n"
   exit 1
 fi
 
@@ -22,9 +25,11 @@ for nnn in {0..4}; do
     exit 1
   fi
 
-  haddnano.py "${outFile}" "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/*root
+#  haddnano.py "${outFile}" "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/*root
+#  rm -rf "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/
 
-  rm -rf "${inpdir}"/"${datasetLabel}"/job_"${nnn}"*/
+  haddnano.py "${outFile}" "${inpdir}"/"${datasetLabel}"/out_"${nnn}"*.root
+  rm -f "${inpdir}"/"${datasetLabel}"/out_"${nnn}"*.root
 done
 unset nnn
 

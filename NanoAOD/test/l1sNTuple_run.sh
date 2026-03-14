@@ -26,6 +26,7 @@ declare -A samplesMap
 # QCD Pt-Flat
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-EpsilonPU_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-FlatPU0to120_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
+samplesMap["Run3Winter25_TTbar_13p6TeV"]="/TT_TuneCP5_13p6TeV_powheg-pythia8/Run3Winter25Digi-142X_mcRun3_2025_realistic_v7-v2/GEN-SIM-RAW"
 
 # Options for job submission (e.g. JobFlavour)
 bdriver_opts="--JobFlavour microcentury"
