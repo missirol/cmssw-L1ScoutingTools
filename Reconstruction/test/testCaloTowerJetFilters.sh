@@ -4,9 +4,7 @@ JOB_LABEL=tmp3
 
 TEST_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
-# Step 1:
-#  create a NanoAOD file (using the "L1DPG"-Nano flavour to include CaloTower-related information)
-#  [input data: run-398183, LSs 261-280 (L~2.2E34, PU~64)].
+# Input data: run-398183, LSs 261-280 (L~2.2E34, PU~64).
 cat <<@EOF >> filein.txt
 /store/data/Run2025G/EphemeralZeroBias0/RAW/v1/000/398/183/00000/1918ed19-9688-47a4-9f2e-43ccd28f1b4a.root
 /store/data/Run2025G/EphemeralZeroBias0/RAW/v1/000/398/183/00000/d17a6148-87c0-46c0-a3c4-a1cf7bcb53cf.root
