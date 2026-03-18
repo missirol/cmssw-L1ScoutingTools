@@ -94,16 +94,16 @@ def medianProfileGraph(th2, profile_mean_stats_per_bin=10):
     return ret
 
 def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
-    addLogX=False, addLogXY=False, logX=False, logY=False, ratio=False, ratioPadFrac=0.3,
+    addLogX=False, addLogXY=False, logX=False, logY=False, ratio=False, ratioPadFrac=0.3, ratioTitle='Ratio',
     doFit=False, fitFuncs=False, fitAutoXMin=False, fitAutoXMax=False, fitExtPol1=False,
     xMin=None, xMax=None, yMin=None, yMax=None, xMinFit=None, xMaxFit=None, yMinRatio=None, yMaxRatio=None,
     autoRangeX=False, xLabelSize=None, xBinLabels=None):
 
-    xyMinMax = []
-    if histograms[0].th1.InheritsFrom('TGraph'):
-       xyMinMax = get_xyminmax_from_graph(histograms[0].th1)
-
     nvalid_histograms = len(histograms)
+
+    xyMinMax = []
+    if nvalid_histograms > 0 and histograms[0].th1.InheritsFrom('TGraph'):
+       xyMinMax = get_xyminmax_from_graph(histograms[0].th1)
 
     canvas = ROOT.TCanvas('tmp', 'tmp', 900, 900)
 
@@ -132,7 +132,8 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        leg.SetTextFont(42)
        leg.SetTextSize(0.03)
        leg.SetFillColor(0)
-       leg.SetNColumns(legNColumns)
+       if legNColumns > 0:
+           leg.SetNColumns(legNColumns)
        for _tmp in histograms:
            if _tmp.th1 is not None:
               if (_tmp.th1.InheritsFrom('TH1') and _tmp.th1.GetEntries()) or (_tmp.th1.InheritsFrom('TGraph') and _tmp.th1.GetN()):
@@ -158,8 +159,9 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
                  xMinCalc = min(xMinCalc, _tmp_xyMinMax[0]) if xMinCalc is not None else _tmp_xyMinMax[0]
                  xMaxCalc = max(xMaxCalc, _tmp_xyMinMax[2]) if xMaxCalc is not None else _tmp_xyMinMax[2]
     else:
-       xMinCalc = xyMinMax[0] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1)
-       xMaxCalc = xyMinMax[2] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1+histograms[0].th1.GetNbinsX())
+       if nvalid_histograms > 0:
+           xMinCalc = xyMinMax[0] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1)
+           xMaxCalc = xyMinMax[2] if xyMinMax else histograms[0].th1.GetXaxis().GetBinLowEdge(1+histograms[0].th1.GetNbinsX())
 
     XMIN = xMinCalc if xMin is None else (max(xMin, xMinCalc) if autoRangeX else xMin)
     XMAX = xMaxCalc if xMax is None else (min(xMax, xMaxCalc) if autoRangeX else xMax)
@@ -358,8 +360,6 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
               if h11 is None: h11 = _tmp.th1
               _tmp.th1.Draw(_tmp.draw)
 
-       if not h11: return 1
-
        h0.Draw('axis,same')
        h0.GetXaxis().SetTitle('')
        h0.GetYaxis().SetTitle(title.split(';')[2])
@@ -413,18 +413,20 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        pad2.SetTicky()
        pad2.Draw()
 
-       denom = h11.Clone()
-       if hasattr(denom, 'GetNbinsX'):
-          for _tmp in range(0, denom.GetNbinsX()+2):
-              denom.SetBinError(_tmp, 0.)
-              if tf1:
-                  denom.SetBinContent(_tmp, tf1.Eval(denom.GetBinCenter(_tmp)))
-       else:
-          for _tmp in range(denom.GetN()):
-              denom.SetPointEYhigh(_tmp, 0.)
-              denom.SetPointEYlow(_tmp, 0.)
-              if tf1:
-                  denom.SetPointY(_tmp, tf1.Eval(denom.GetPointX(_tmp)))
+       denom = None
+       if h11:
+           denom = h11.Clone()
+           if hasattr(denom, 'GetNbinsX'):
+              for _tmp in range(0, denom.GetNbinsX()+2):
+                  denom.SetBinError(_tmp, 0.)
+                  if tf1:
+                      denom.SetBinContent(_tmp, tf1.Eval(denom.GetBinCenter(_tmp)))
+           else:
+              for _tmp in range(denom.GetN()):
+                  denom.SetPointEYhigh(_tmp, 0.)
+                  denom.SetPointEYlow(_tmp, 0.)
+                  if tf1:
+                      denom.SetPointY(_tmp, tf1.Eval(denom.GetPointX(_tmp)))
 
        plot_ratios = []
 
@@ -459,7 +461,7 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
        h21.SetFillColor(16)
 
        h21.GetXaxis().SetTitle(title.split(';')[1])
-       h21.GetYaxis().SetTitle('Data / Fit')
+       h21.GetYaxis().SetTitle(ratioTitle)
        h21.GetYaxis().CenterTitle()
        h21.GetXaxis().SetTitleSize(h21.GetXaxis().GetTitleSize()/(1-pad1H))
        h21.GetYaxis().SetTitleSize(h21.GetYaxis().GetTitleSize()/(1-pad1H) * 0.85)
@@ -558,8 +560,10 @@ def fitAndPlot(histograms, outputs, title, labels, legXY=[], legNColumns=1,
 
     canvas.Close()
 
-    if ratio:
+    if plot_ratios:
        del plot_ratios
+
+    if denom:
        del denom
 
     return tf1
@@ -579,8 +583,10 @@ def getPlotLabels(key, keyword):
         _jetLabel = 'Uncorrected AK4 L1CaloTowerJets'
     elif key.startswith('L1EmulAK4CTJet0CorrA_'):
         _jetLabel = 'AK4 L1CaloTowerJets (JEC=A)'
-    elif key.startswith('L1EmulAK4CTJet0Corr_'):
-        _jetLabel = 'AK4 L1CaloTowerJets (Corr)'
+    elif key.startswith('L1EmulAK4CTJet0CorrB_'):
+        _jetLabel = 'AK4 L1CaloTowerJets (JEC=B)'
+    elif key.startswith('L1EmulAK4CTJet0CorrC_'):
+        _jetLabel = 'AK4 L1CaloTowerJets (JEC=C)'
     elif key.startswith('L1EmulAK4CTJet1_'):
         _jetLabel = 'Uncorrected AK4 L1CaloTowerJets (no E-saturated towers)'
 
@@ -679,6 +685,7 @@ class PlotConfig:
         self.yMinRatio = None
         self.yMaxRatio = None
         self.ratio = True
+        self.ratioTitle = ''
         self.autoRangeX = True
         self.xLabelSize = None
         self.xBinLabels= []
@@ -749,6 +756,8 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
 
     cfg.hists = []
 
+    returnNone = True
+
     ##
     ## Jet-Energy-Scale-Correction Fits (Methods #1 and #2)
     ##
@@ -799,6 +808,7 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
        cfg.labels = [f'Sample: {sampleLabel}', f'Jets: {cfg.jetLabel}', f'Selection: {cfg.selLabel}']
 
        cfg.ratio = cfg.doFit
+       cfg.ratioTitle = 'Data / Fit'
        cfg.yMinRatio = 0.81
        cfg.yMaxRatio = 1.19
 
@@ -819,6 +829,7 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
            hcolor = ROOT.kRed
 
        if cfg.doFit and key_basename.split('_')[0] in ['L1EmulAK4CTJet0']:
+           returnNone = False
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key, Legend='', Color=hcolor)]
 
@@ -833,8 +844,15 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
 
        cfg.xMin = 1
        cfg.xMax = 300
-       cfg.yMin = -0.4
-       cfg.yMax = 3.5
+
+       if '_RMS' in key:
+           cfg.yMin = 0.01
+           cfg.yMax = 1.89
+       else:
+           cfg.yMin = -0.4
+           cfg.yMax = 3.5
+
+       cfg.ratioTitle = 'Ratio'
 
        cfg.addLogX = True
 
@@ -843,15 +861,16 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
        jetCollPrefix = 'L1EmulAK4CTJet0_'
 
        if pt_profile and jetCollPrefix in key:
+           returnNone = False
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulJet_'), Legend='L1T Jets (corr.)', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0_'), Legend='CaloTowerJets (Uncorr.)', Color=ROOT.kGray+1) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrC_'), Legend='CaloTowerJets (Corr-C)', Color=ROOT.kBlue) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0_'), Legend='CTJ (Uncorr)', Color=ROOT.kGray+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrA_'), Legend='CTJ (JEC-A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrB_'), Legend='CTJ (JEC-B)', Color=ROOT.kGreen+2) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace(jetCollPrefix, 'L1EmulAK4CTJet0CorrC_'), Legend='CTJ (JEC-C)', Color=ROOT.kBlue) if idx==0 else None]
 
        cfg.legNColumns = len(list(filter(None, cfg.hists)))
-       cfg.legXY = [0.15, 0.85+0.005, 0.96, 0.85+0.045]
+       cfg.legXY = [0.15, 0.855, 0.96, 0.895]
 
     ##
     ## Unknown keywords
@@ -862,8 +881,8 @@ def getPlotConfig(key, keyword, inputList, sampleLabel):
     # remove None entries
     cfg.hists = list(filter(None, cfg.hists))
 
-    if len(cfg.hists) < 1:
-       return None
+    if returnNone:
+        return None
 
     return cfg
 
@@ -1097,6 +1116,7 @@ if __name__ == '__main__':
              'addLogX': _plotConfig.addLogX,
              'addLogXY': _plotConfig.addLogXY,
              'ratio': _plotConfig.ratio,
+             'ratioTitle': _plotConfig.ratioTitle,
              'logX': _plotConfig.logX,
              'logY': _plotConfig.logY,
              'xMin': _plotConfig.xMin,

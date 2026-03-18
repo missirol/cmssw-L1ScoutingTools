@@ -17,24 +17,20 @@ outdir=out2_jetPerf_plots_tmp
 
 rm -rf "${outdir}"{,.tar.gz}
 
-samples=(
-  Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120
-)
+# Plots labels of input data sets
+samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="QCD-#hat{p}_{T}[15-7000], EpsilonPU (Run3Winter25)"
+samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="QCD-#hat{p}_{T}[15-7000], PU[0-120] (Run3Winter25)"
+samplesMap["Run3Winter25_TTbar_13p6TeV"]="TTbar (Run3Winter25)"
 
-for sample in "${samples[@]}"; do
-  outd_i="${outdir}"/"${sample}"
-
-  opts_i=""
-  if [[ ${sample} == *"QCD_"* ]]; then
-    opts_i="-m '*Jet*'"
-  fi
+for sampleName in ${!samplesMap[@]}; do
+  sampleLabel=${samplesMap[${sampleName}]}
 
   jetMETPerformance_plots.py \
     -k run3_l1s_jetperf \
-    ${opts_i} \
-    -i ${inpdir}/harvesting/${sample}.root:'N/A':1:1:20 \
-    -o ${outd_i} \
-    -l ${sample} \
+    -m "*Jet*" \
+    -i "${inpdir}"/harvesting/"${sampleName}".root:'N/A':1:1:20 \
+    -o "${outdir}"/"${sampleName}" \
+    -l "${sampleLabel}" \
     -e png pdf
 done
 

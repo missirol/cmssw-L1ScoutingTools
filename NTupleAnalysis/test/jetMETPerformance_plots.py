@@ -380,9 +380,10 @@ def getPlotLabels(key, isProfile, isEfficiency, keyword):
     elif key.startswith('GenJetNoMu_'): _objLabel = 'GEN Jets(NoMu)'
     elif key.startswith('L1EmulJet_'): _objLabel = 'L1TJets'
     elif key.startswith('L1EmulAK4CTJet0_'): _objLabel = 'L1CaloTowerJets(0)'
-    elif key.startswith('L1EmulAK4CTJet1_'): _objLabel = 'L1CaloTowerJets(1)'
-    elif key.startswith('L1EmulAK4CTJet0Corr_'):  _objLabel = 'L1CaloTowerJets(0-Corr)'
     elif key.startswith('L1EmulAK4CTJet0CorrA_'): _objLabel = 'L1CaloTowerJets(0-CorrA)'
+    elif key.startswith('L1EmulAK4CTJet0CorrB_'): _objLabel = 'L1CaloTowerJets(0-CorrB)'
+    elif key.startswith('L1EmulAK4CTJet0CorrC_'): _objLabel = 'L1CaloTowerJets(0-CorrC)'
+    elif key.startswith('L1EmulAK4CTJet1_'): _objLabel = 'L1CaloTowerJets(1)'
 
     if '_EtaIncl' in key: pass
     elif '_Eta2p4' in key: _objLabel += ', |#eta| < 2.4'
@@ -1619,41 +1620,43 @@ def getPlotConfig(key, keyword, inputList):
        if 'L1EmulAK4CTJet0_' in key:
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'L1EmulAK4CTJet0_'), Legend='CaloTowerJets (uncorr.)', Color=ROOT.kBlue)]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0_', 'L1EmulAK4CTJet0_'), Legend='CTJ (Uncorr.)', Color=ROOT.kGray+1)]
 
-       elif 'L1EmulAK4CTJet0CorrB_' in key:
+       elif 'L1EmulAK4CTJet0CorrC_' in key:
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrB_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrB_', 'L1EmulJet_'), Legend='L1T Jets (corr.)', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrB_', 'L1EmulAK4CTJet0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrB_', 'L1EmulAK4CTJet0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrC_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrC_', 'L1EmulJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrC_', 'L1EmulAK4CTJet0CorrA_'), Legend='CTJ (JEC=A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrC_', 'L1EmulAK4CTJet0CorrB_'), Legend='CTJ (JEC=B)', Color=ROOT.kGreen+2) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulAK4CTJet0CorrC_', 'L1EmulAK4CTJet0CorrC_'), Legend='CTJ (JEC=C)', Color=ROOT.kBlue) if idx==0 else None]
 
        elif 'L1EmulJet_' in key and pt_profile:
            cfg.xMax = 300
-
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'GenJetNoMu_'), Legend='GEN Jets(NoMu)', Color=ROOT.kBlack) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulJet_'), Legend='L1T Jets (corr.)', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulAK4CTJet0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulAK4CTJet0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulAK4CTJet0CorrA_'), Legend='CTJ (JEC=A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulAK4CTJet0CorrB_'), Legend='CTJ (JEC=B)', Color=ROOT.kGreen+2) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1EmulJet_', 'L1EmulAK4CTJet0CorrC_'), Legend='CTJ (JEC=C)', Color=ROOT.kBlue) if idx==0 else None]
 
        elif 'MatchedToL1CT0_' in key:
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0_', 'MatchedToL1CT0_'), Legend='CaloTowerJets (uncorr.)', Color=ROOT.kBlue)]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0_', 'MatchedToL1CT0_'), Legend='CTJ (Uncorr.)', Color=ROOT.kBlue)]
 
-       elif 'MatchedToL1CT0CorrB_' in key:
+       elif 'MatchedToL1CT0CorrC_' in key:
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrB_', 'MatchedToL1T_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrB_', 'MatchedToL1CT0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrB_', 'MatchedToL1CT0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrC_', 'MatchedToL1T_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrC_', 'MatchedToL1CT0CorrA_'), Legend='CTJ (JEC=A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrC_', 'MatchedToL1CT0CorrB_'), Legend='CTJ (JEC=B)', Color=ROOT.kGreen+2) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1CT0CorrC_', 'MatchedToL1CT0CorrC_'), Legend='CTJ (JEC=C)', Color=ROOT.kBlue) if idx==0 else None]
 
        elif 'MatchedToL1T_' in key and pt_profile:
            cfg.xMax = 300
-
            for idx, inp in enumerate(inputList):
                cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1T_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1CT0CorrA_'), Legend='CaloTowerJets (Corr-A)', Color=ROOT.kViolet) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1CT0CorrB_'), Legend='CaloTowerJets (Corr-B)', Color=ROOT.kGreen+1) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1CT0CorrA_'), Legend='CTJ (JEC=A)', Color=ROOT.kViolet) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1CT0CorrB_'), Legend='CTJ (JEC=B)', Color=ROOT.kGreen+2) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('MatchedToL1T_', 'MatchedToL1CT0CorrC_'), Legend='CTJ (JEC=C)', Color=ROOT.kBlue) if idx==0 else None]
 
     ##
     ## Unknown keywords

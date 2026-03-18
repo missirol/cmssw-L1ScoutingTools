@@ -53,7 +53,7 @@ if __name__ == '__main__':
                        help='path to input file(s)')
 
    parser.add_argument('-o', '--output', dest='output', required=True, action='store', default='',
-                       help='path to output file (1 input) or directory (multiple inputs')
+                       help='path to output file (1 input) or directory (multiple inputs)')
 
    parser.add_argument('-s', '--separator-2d', dest='separator_2d', action='store', default='__vs__',
                        help='string used to split name of 2D histograms (to construct profile histograms)')

@@ -142,7 +142,7 @@ void JetResponseAnalysisDriver::analyze() {
   H2("nPU__vs__nCTie4")->Fill(nPU, nCTie4, wgt);
 
   // AK4 Jets
-  float const minAK4JetPt{1}; //!!
+  float const minAK4JetPt{1};
   float const minAK4JetPtRef{10};
   float const maxAK4JetDeltaRmatchRef{0.2};
 
@@ -151,9 +151,6 @@ void JetResponseAnalysisDriver::analyze() {
     fhDataAK4Jets.jetCollection = jetLabel.first;
     fhDataAK4Jets.jetPtMin = utils::stringStartsWith(jetLabel.first, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
     fhDataAK4Jets.jetPtMax = (jetLabel.first == "L1EmulJet1") ? 1023.4 : -1;
-
-//    fhDataAK4Jets.jetPtMax = 300; //!!
-
     fhDataAK4Jets.jetAbsEtaMax = 5.0;
     for (auto const& jetLabelRefs : jetLabel.second) {
       auto const jetPtMin2 = utils::stringStartsWith(jetLabelRefs.second, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
