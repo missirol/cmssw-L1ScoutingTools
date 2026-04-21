@@ -18,6 +18,7 @@ outdir=out2_jetPerf_plots_tmp
 rm -rf "${outdir}"{,.tar.gz}
 
 # Plots labels of input data sets
+declare -A samplesMap
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="QCD-#hat{p}_{T}[15-7000], EpsilonPU (Run3Winter25)"
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="QCD-#hat{p}_{T}[15-7000], PU[0-120] (Run3Winter25)"
 samplesMap["Run3Winter25_TTbar_13p6TeV"]="TTbar (Run3Winter25)"
@@ -31,7 +32,7 @@ for sampleName in ${!samplesMap[@]}; do
     -i "${inpdir}"/harvesting/"${sampleName}".root:'N/A':1:1:20 \
     -o "${outdir}"/"${sampleName}" \
     -l "${sampleLabel}" \
-    -e png pdf
+    -e png
 done
 
 if [ ${outtar} -gt 0 ] && [ -d "${outdir}" ]; then
