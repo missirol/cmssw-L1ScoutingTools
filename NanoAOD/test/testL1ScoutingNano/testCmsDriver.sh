@@ -8,8 +8,8 @@ nanoFlavours=(
 )
 
 declare -A inputFiles=(
-  ["L1Scout"]="/store/data/Run2026A/L1Scouting/L1SCOUT/v1/000/401/733/00000/81f5a1c5-a8d2-41bd-a9d8-54959c778d9f.root"
-  ["L1ScoutSelect"]="/store/data/Run2026A/L1ScoutingSelection/L1SCOUT/v1/000/401/733/00000/52356b7e-e20e-4afb-bde6-6674e2b8b94f.root"
+  ["L1Scout"]="/store/data/Run2026B/L1Scouting/L1SCOUT/v1/000/402/144/00000/af07ed8c-d45e-41ad-81c7-8c32478c40be.root"
+  ["L1ScoutSelect"]="/store/data/Run2026B/L1ScoutingSelection/L1SCOUT/v1/000/402/144/00000/56a86b0d-c4a0-4ffc-84c5-158494ec8ecc.root"
 )
 
 maxEvents=10
@@ -27,6 +27,7 @@ for nanoFlavour in "${nanoFlavours[@]}"; do
     --python_filename "${outputFilePrefix}".py \
     --fileout "${outputFilePrefix}".root \
     -s NANO:@"${nanoFlavour}"
+  edmConfigDump --prune "${outputFilePrefix}".py > "${outputFilePrefix}"_dump.py
   edmFileUtil "${outputFilePrefix}".root
 
   dataTier=NANOEDMAOD
@@ -41,11 +42,12 @@ for nanoFlavour in "${nanoFlavours[@]}"; do
     --python_filename "${outputFilePrefix}".py \
     --fileout "${outputFilePrefix}".root \
     -s NANO:@"${nanoFlavour}"
+  edmConfigDump --prune "${outputFilePrefix}".py > "${outputFilePrefix}"_dump.py
   edmFileUtil "${outputFilePrefix}".root
   edmDumpEventContent "${outputFilePrefix}".root | tee "${outputFilePrefix}".txt
 
-  # Conversion from NANOEDMAOD to NANOAOD
-cat <<@EOF >> "${outputFilePrefix}"_flattened.py
+  # Conversion from NANOEDMAOD to NANOAOD with a hand-made config
+cat <<@EOF >> "${outputFilePrefix}"_flattened1.py
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("NANOAOD")
@@ -55,25 +57,38 @@ process.source = cms.Source("PoolSource",
 )
 
 process.outputModule = cms.OutputModule("OrbitNanoAODOutputModule",
-    fileName = cms.untracked.string("file:${outputFilePrefix}_flattened.root"),
+    fileName = cms.untracked.string("file:${outputFilePrefix}_flattened1.root"),
     dataset = cms.untracked.PSet(
         dataTier = cms.untracked.string('NANOAOD')
     ),
-    compressionAlgorithm = cms.untracked.string("LZMA"),
-    compressionLevel = cms.untracked.int32(9),
-    outputCommands = cms.untracked.vstring(
-        "drop *",
-        "keep l1ScoutingRun3OrbitFlatTable_*_*_*",
-        "keep uints_*_SelBx_*"
-    ),
-#    selectedBx = cms.InputTag("FinalBxSelector:SelBx"),
+    selectedBx = cms.InputTag(""),
     skipEmptyBXs = cms.bool(True)
 )
 
+from Configuration.EventContent.EventContent_cff import L1SCOUTNANOAODEventContent
+process.outputModule.update_(L1SCOUTNANOAODEventContent)
+
 process.outputEndPath = cms.EndPath(process.outputModule)
 @EOF
-  cmsRun "${outputFilePrefix}"_flattened.py 2>&1 | tee "${outputFilePrefix}"_flattened.log
-  edmFileUtil "${outputFilePrefix}"_flattened.root
+  cmsRun "${outputFilePrefix}"_flattened1.py 2>&1 | tee "${outputFilePrefix}"_flattened1.log
+  edmFileUtil "${outputFilePrefix}"_flattened1.root
+
+  # Conversion from NANOEDMAOD to NANOAOD using RunMerge.py
+  runMergeFile="${CMSSW_BASE}"/src/Configuration/DataProcessing/test/RunMerge.py
+  if [ ! -f "${runMergeFile}" ]; then
+    runMergeFile="${CMSSW_RELEASE_BASE}"/src/Configuration/DataProcessing/test/RunMerge.py
+  fi
+
+  python3 "${runMergeFile}" \
+    --input-files=file:"${outputFilePrefix}".root \
+    --output-file="${outputFilePrefix}"_flattened2.root \
+    --mergeNANO --isL1Scouting
+
+  mv RunMergeCfg.py "${outputFilePrefix}"_flattened2.py
+
+  cmsRun "${outputFilePrefix}"_flattened2.py \
+    2>&1 | tee "${outputFilePrefix}"_flattened2.log
+  edmFileUtil "${outputFilePrefix}"_flattened2.root
 done
 
 rm -rf __pycache__
