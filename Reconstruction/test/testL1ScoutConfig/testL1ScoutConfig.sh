@@ -3,9 +3,13 @@
 [ $# -eq 1 ] || exit 1
 
 JOBLABEL=tmp_l1Scout
-INPUTFILE=/eos/user/m/missirol/l1s_data_250306/run398183/run398183_ls0261_index000000.raw
-RUNNUMBER=398183
-MAXORBITS=10
+#INPUTFILE=/eos/user/m/missirol/l1s_data_250219/run000001/run000001_ls0770_index000063.raw
+#RUNNUMBER=000001
+#INPUTFILE=/eos/user/m/missirol/l1s_data_250306/run398183/run398183_ls0261_index000000.raw
+#RUNNUMBER=398183
+INPUTFILE=/eos/user/m/missirol/l1s_data_250401/run402562/run402562_ls6099_index000050.raw
+RUNNUMBER=402562
+MAXORBITS=-1
 
 wget "${1}" -O "${JOBLABEL}"_cfg.py
 
@@ -40,6 +44,9 @@ for outModLabel in process.outputModules_():
     ))
     outMod = getattr(process, outModLabel)
     del outMod.SelectEvents
+
+del process.epL1ScoutingSelection
+del process.scPrescaler
 @EOF
 
 rm -rf tmp run"${RUNNUMBER}"
