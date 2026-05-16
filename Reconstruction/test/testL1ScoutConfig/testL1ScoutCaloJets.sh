@@ -1,18 +1,18 @@
 #!/bin/bash -e
 
-# cmsswRelease=CMSSW_16_0_6_patch1
-# cmsswBranch=missirol:devel_l1sCaloJECs_160X
-#
-# cmsrel "${cmsswRelease}"
-# cd "${cmsswRelease}"/src
-# cmsenv
-# git cms-init --ssh
-# git cms-merge-topic "${cmsswBranch}"
-#
-# git clone https://github.com/missirol/L1TriggerScouting-OnlineProcessing.git \
-#  L1TriggerScouting/OnlineProcessing/data
-#
-# scram b
+ cmsswRelease=CMSSW_16_0_6_patch1
+ cmsswBranch=missirol:devel_l1sCaloJECs_160X
+
+ cmsrel "${cmsswRelease}"
+ cd "${cmsswRelease}"/src
+ cmsenv
+ git cms-init --ssh
+ git cms-merge-topic "${cmsswBranch}"
+
+ git clone https://github.com/missirol/L1TriggerScouting-OnlineProcessing.git \
+  L1TriggerScouting/OnlineProcessing/data
+
+ scram b
 
 JOBLABEL=tmp_l1Scout
 INPUTFILE=file:/eos/cms/tier0/store/data/Run2026C/L1Scouting/L1SCOUT/v1/000/403/166/00000/7691926b-b588-4e29-9887-fa76f0294480.root
