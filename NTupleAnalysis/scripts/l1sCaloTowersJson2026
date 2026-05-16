@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import re
+import subprocess
+
+def colored_text(txt, keys=[]):
+    _tmp_out = ''
+    for _i_tmp in keys:
+        _tmp_out += '\033['+_i_tmp+'m'
+    _tmp_out += txt
+    if len(keys) > 0: _tmp_out += '\033[0m'
+
+    return _tmp_out
+
+def KILL(log):
+    raise RuntimeError('\n '+colored_text('@@@ FATAL', ['1','91'])+' -- '+log+'\n')
+
+def WARNING(log):
+    print('\n '+colored_text('@@@ WARNING', ['1','93'])+' -- '+log+'\n')
+
+def MKDIRP(dirpath, verbose=False, dry_run=False):
+    if verbose:
+        print('\033[1m'+'>'+'\033[0m'+' os.mkdirs("'+dirpath+'")')
+    if dry_run:
+        return
+    try:
+      os.makedirs(dirpath)
+    except OSError:
+      if not os.path.isdir(dirpath):
+        raise
+    return
+
+def EXE(cmd, suspend=True, verbose=False, dry_run=False):
+    if verbose:
+        print('\033[1m'+'>'+'\033[0m'+' '+cmd)
+    if dry_run:
+        return
+
+    _exitcode = os.system(cmd)
+    _exitcode = min(255, _exitcode)
+
+    if _exitcode and suspend:
+       WARNING(cmd)
+       raise RuntimeError(_exitcode)
+
+    return _exitcode
+
+def get_output(cmd, permissive=False):
+    prc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf8')
+
+    out, err = prc.communicate()
+
+    if (not permissive) and prc.returncode:
+       KILL('get_output -- shell command failed (execute command to reproduce the error):\n'+' '*14+'> '+cmd)
+
+    return (out, err)
+
+def command_output_lines(cmd, stdout=True, stderr=False, permissive=False):
+    _tmp_out_ls = []
+
+    if not (stdout or stderr):
+       WARNING('command_output_lines -- options "stdout" and "stderr" both set to FALSE, returning empty list')
+       return _tmp_out_ls
+
+    _tmp_out = get_output(cmd, permissive=permissive)
+
+    if stdout: _tmp_out_ls += _tmp_out[0].split('\n')
+    if stderr: _tmp_out_ls += _tmp_out[1].split('\n')
+
+    return _tmp_out_ls
+
+def group_consecutive(nums):
+    if not nums:
+        return []
+    
+    sorted_nums = sorted(set(nums))
+    groups = []
+    start = end = sorted_nums[0]
+
+    for n in sorted_nums[1:]:
+        if n == end + 1:
+            end = n
+        else:
+            groups.append([start, end])
+            start = end = n
+
+    groups.append([start, end])
+    return groups
+
+def overlap(groups1, groups2):
+    # Expand each group list back to full set of integers
+    def expand(groups):
+        result = set()
+        for g in groups:
+            result.update(range(g[0], g[-1] + 1))
+        return result
+
+    common = groups1 & expand(groups2)
+    return group_consecutive(common)
+
+def run_brilcalc(brilcalc_cmd):
+    result = subprocess.run(["bash"],
+        input = f"""
+shopt -s expand_aliases
+source /cvmfs/cms-bril.cern.ch/cms-lumi-pog/brilws-docker/brilws-env 
+{brilcalc_cmd}
+""",
+        capture_output = True,
+        text = True
+    )
+    return (result.stdout, result.stderr)
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description = 'Convert a set of Scouting Raw Data (SRD) files into one EDM file',
+        formatter_class = argparse.ArgumentDefaultsHelpFormatter
+    )
+
+    parser.add_argument('-j', '--dqm-json', type=str, default='/eos/user/c/cmsdqm/www/CAF/certification/Collisions26/Collisions26_MLEnhancedGolden_Latest.json',
+        help='Path to json file with lumisections certified as good for physics analysis')
+
+    parser.add_argument('-d', '--dataset', type=str, default='/L1Scouting/Run2026*/L1SCOUT',
+        help='Dataset name passed to dasgoclient, it can include "*" wildcards')
+
+    parser.add_argument('-r', '--dataset-regex', type=str, default='/L1Scouting/Run2026[A-Z]-v[0-9]+/L1SCOUT',
+        help='Regular expression used to select the datasets returned by dasgoclient')
+
+    args = parser.parse_args()
+
+    # CaloTowers are read out in the L1-Scouting system only for 2 timeslices out of 9
+    caloTowersFraction = 2 / 9
+
+    stdout_delimiter = '-'*150
+
+    print(stdout_delimiter)
+
+    print(f'Certified luminosity sections: {args.dqm_json}')
+    print(f'Datasets: {args.dataset} (regex: {args.dataset_regex})')
+
+    print(stdout_delimiter)
+
+    out_dict = dict()
+
+    dqm_json = json.load(open(args.dqm_json))
+
+    datasets = command_output_lines(f'dasgoclient -query "dataset={args.dataset}" status=VALID')
+    datasets = sorted(list(set([foo for foo in datasets if re.match(args.dataset_regex, foo)])))
+    for dataset in datasets:
+        print(dataset)
+
+        das_query = f'dasgoclient -query "file,run,lumi dataset={dataset}"'
+        frl_lines = [foo for foo in command_output_lines(das_query) if foo]
+
+        for frl_line in frl_lines:
+            frl_line_split = frl_line.split()
+            if len(frl_line_split) != 3:
+                raise RuntimeError(f'invalid output for DAS query "{das_query}" (number of entries different from 3): {frl_line}')
+
+            runNumber = frl_line_split[1]
+            try:
+                int(runNumber)
+            except:
+                raise RuntimeError(f'invalid output for DAS query "{das_query}" (run number cannot be converted to an integer): {frl_line}')
+
+            if runNumber not in out_dict:
+                out_dict[runNumber] = set()
+
+            lumis_str = frl_line_split[2]
+            if not (lumis_str.startswith('[') and lumis_str.endswith(']')):
+                raise RuntimeError(f'invalid output for DAS query "{das_query}" (invalid format for list of luminosity blocks): {frl_line}')
+            for lumi_str in lumis_str[1:-1].split(','):
+                out_dict[runNumber].add(int(lumi_str))
+
+    print(stdout_delimiter)
+
+    ###
+    ### Should this run be skipped?
+    ###
+    def skipRun(run_number):
+        # Non-standard proton-proton runs (PU~7, PU~150, sqrt(s)=2.4 TeV)
+        if run_number >= 402514 and run_number <= 403422:
+            return True
+        # CaloLayer-1 readout disabled in the L1-Scouting system
+        if run_number >= 402698 and run_number <= 403164:
+            return True
+        return False
+
+    ###
+    ### What is the prescale factor of the L1Scouting stream in this run?
+    ###
+    def prescaleFactor(run_number):
+        psFactor = -1
+
+        if run_number >= 401279 and run_number <= 403753:
+            psFactor = 15
+
+        elif run_number >= 403754 and run_number <= 999999:
+            psFactor = 7
+
+        return psFactor
+
+    ###
+    ### "ret": main output dictionary.
+    ###  - key: prescale factor of the L1Scouting stream.
+    ###  - value: dictionary with runs and luminosity-blocks.
+    ###
+    ret = dict()
+
+    for runNumber in out_dict:
+        runNumber_int = int(runNumber)
+
+        # Skip runs within any of the excluded-runs ranges
+        if skipRun(runNumber_int):
+            continue
+
+        # Skip runs that are not certified as good for physics
+        if runNumber not in dqm_json:
+            continue
+
+        common_lumis = overlap(out_dict[runNumber], dqm_json[runNumber])
+        if common_lumis:
+            psFactor = prescaleFactor(runNumber_int)
+            if psFactor > 0:
+                if psFactor not in ret:
+                    ret[psFactor] = dict()
+                ret[psFactor][runNumber] = common_lumis
+
+    # Total recorded luminosity in inverse femtobarns (/fb)
+    lumiRecorded_ifb = 0
+
+    for psFactor in ret:
+
+        jsonLabel = f'caloTowersJson2026_prescale{psFactor:02d}'
+        json.dump(ret[psFactor], open(f'{jsonLabel}.json', 'w'), sort_keys=True, indent=4)
+
+        if not ret[psFactor]:
+            continue
+
+        # Extract value of recorded luminosity from brilcalc output
+        brilcalc_cmd = f'brilcalc lumi -u /fb -b "STABLE BEAMS" -i {jsonLabel}.json 2>&1 | tee {jsonLabel}.log'
+        print(brilcalc_cmd)
+
+        stdout, stderr = run_brilcalc(brilcalc_cmd)
+        stdout_lines = stdout.split('\n')
+        ret_lumiRecorded_ifb = float(stdout_lines[stdout_lines.index('#Summary: ')+4].replace('|','').split()[5])
+
+        # Apply prescale factor for CaloTowers (fraction of timeslices, prescale factor of the L1Scouting stream)
+        ret_lumiRecorded_ifb *= caloTowersFraction
+        ret_lumiRecorded_ifb /= psFactor
+        print(f'  ({ret_lumiRecorded_ifb:5.3f} /fb)')
+
+        lumiRecorded_ifb += ret_lumiRecorded_ifb
+
+    print(stdout_delimiter)
+    print(f'Total Recorded Luminosity: {lumiRecorded_ifb:5.3f} /fb')
+    print(stdout_delimiter)
