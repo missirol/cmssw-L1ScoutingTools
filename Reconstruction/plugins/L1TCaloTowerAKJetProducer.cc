@@ -63,7 +63,6 @@ void L1TCaloTowerAKJetProducer::produce(edm::StreamID, edm::Event& iEvent, edm::
       auto const& input = inputs.at(bx, idx);
       if ((towerMinHwPt_ < 0 or input.hwPt() >= towerMinHwPt_) and
           (towerMaxHwPt_ < 0 or input.hwPt() <= towerMaxHwPt_)) {
-
         if (not l1ScoutingRun3::calol1::validHwEta(input.hwEta())) {
           edm::LogWarning("ScoutingJetProducer") << "CaloTower in BX=" << bx << " with invalid hwEta value ("
                                                  << input.hwEta() << ") will not be used for jet clustering !";

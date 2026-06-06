@@ -60,18 +60,22 @@ private:
         }
 
         if (ptMin >= ptMax) {
-          throw cms::Exception("InvalidInput")
-              << "inconsistent values for parameters \"ptMin\" and \"ptMax\" (the latter must be greater than the former): ptMin=" << ptMin << " ptMax=" << ptMax;
+          throw cms::Exception("InvalidInput") << "inconsistent values for parameters \"ptMin\" and \"ptMax\" (the "
+                                                  "latter must be greater than the former): ptMin="
+                                               << ptMin << " ptMax=" << ptMax;
         }
 
         if (etaMin >= etaMax) {
-          throw cms::Exception("InvalidInput")
-              << "inconsistent values for parameters \"etaMin\" and \"etaMax\" (the latter must be greater than the former): etaMin=" << etaMin << " etaMax=" << etaMax;
+          throw cms::Exception("InvalidInput") << "inconsistent values for parameters \"etaMin\" and \"etaMax\" (the "
+                                                  "latter must be greater than the former): etaMin="
+                                               << etaMin << " etaMax=" << etaMax;
         }
 
         if (puProxyMin > 0 and puProxyMax > 0 and puProxyMin >= puProxyMax) {
           throw cms::Exception("InvalidInput")
-              << "inconsistent values for parameters \"puProxyMin\" and \"puProxyMax\" (if both are greater than zero, the latter must be greater than the former): puProxyMin=" << puProxyMin << " puProxyMax=" << puProxyMax;
+              << "inconsistent values for parameters \"puProxyMin\" and \"puProxyMax\" (if both are greater than zero, "
+                 "the latter must be greater than the former): puProxyMin="
+              << puProxyMin << " puProxyMax=" << puProxyMax;
         }
 
         if (formNParams <= 0) {
@@ -90,14 +94,14 @@ private:
           }
         }
 
-        data_.emplace_back(ptMin, ptMax, etaMin, etaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
+        data_.emplace_back(
+            ptMin, ptMax, etaMin, etaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
       }
     }
 
     double correction(float const pt, float const eta, int const puProxy) const {
       for (auto const& entry : data_) {
-        if (eta >= entry.etaMin and eta < entry.etaMax and
-            (entry.puProxyMin < 0 or puProxy >= entry.puProxyMin) and
+        if (eta >= entry.etaMin and eta < entry.etaMax and (entry.puProxyMin < 0 or puProxy >= entry.puProxyMin) and
             (entry.puProxyMax < 0 or puProxy < entry.puProxyMax)) {
           std::vector<double> vars{std::clamp(pt, entry.ptMin, entry.ptMax)};
           return (entry.formulaEvaluator.evaluate(vars, entry.formulaParameters) / vars[0]);
@@ -170,7 +174,7 @@ void L1TCaloTowerJetCorrectorC::produce(edm::StreamID, edm::Event& iEvent, edm::
       jet.setP4(jet.p4() * corr);
 
       LogTrace("L1TCaloTowerJetCorrectorC") << "[L1TCaloTowerJetCorrectorC]    Post-JESC: eta=" << jet.eta()
-                                           << " phi=" << jet.phi() << " pT(corrected)=" << jet.pt();
+                                            << " phi=" << jet.phi() << " pT(corrected)=" << jet.pt();
 
       out_jets.emplace_back(std::move(jet));
     }

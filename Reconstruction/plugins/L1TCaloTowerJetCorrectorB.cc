@@ -60,14 +60,14 @@ private:
           }
         }
 
-        data_.emplace_back(ptMin, ptMax, etaMin, etaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
+        data_.emplace_back(
+            ptMin, ptMax, etaMin, etaMax, puProxyMin, puProxyMax, std::move(formEval), std::move(formParams));
       }
     }
 
     double correction(float const pt, float const eta, int const puProxy) const {
       for (auto const& entry : data_) {
-        if (eta >= entry.etaMin and eta < entry.etaMax and
-            (entry.puProxyMin < 0 or puProxy >= entry.puProxyMin) and
+        if (eta >= entry.etaMin and eta < entry.etaMax and (entry.puProxyMin < 0 or puProxy >= entry.puProxyMin) and
             (entry.puProxyMax < 0 or puProxy < entry.puProxyMax)) {
           std::vector<double> vars{std::min(std::max(pt, entry.ptMin), entry.ptMax)};
           return entry.formulaEvaluator.evaluate(vars, entry.formulaParameters);
@@ -136,7 +136,7 @@ void L1TCaloTowerJetCorrectorB::produce(edm::StreamID, edm::Event& iEvent, edm::
       jet.setP4(jet.p4() * corr);
 
       LogTrace("L1TCaloTowerJetCorrectorB") << "[L1TCaloTowerJetCorrectorB]    Post-JESC: eta=" << jet.eta()
-                                           << " phi=" << jet.phi() << " pT(corrected)=" << jet.pt();
+                                            << " phi=" << jet.phi() << " pT(corrected)=" << jet.pt();
 
       if (corr > 0) {
         out_jets.emplace_back(std::move(jet));

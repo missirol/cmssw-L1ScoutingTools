@@ -21,11 +21,16 @@ void JetMETPerformanceAnalysisDriver::init() {
   jecA_.init(getOption("jecA_filePath"));
 
   jetCategoryLabels_ = {
-      "_EtaIncl",  "_EtaInclPt300", //"_EtaInclPt0", "_EtaInclPt1", "_EtaInclPt2", "_EtaInclPt3", "_EtaInclPt4", "_EtaInclPt5",
-      "_Eta2p5",   "_Eta2p5Pt300",  //"_Eta2p5Pt0",  "_Eta2p5Pt1",  "_Eta2p5Pt2",  "_Eta2p5Pt3",  "_Eta2p5Pt4",  "_Eta2p5Pt5",
-      "_HB",       "_HBPt300",      //"_HBPt0",      "_HBPt1",      "_HBPt2",      "_HBPt3",      "_HBPt4",      "_HBPt5",
-      "_HE",       "_HEPt300",      //"_HEPt0",      "_HEPt1",      "_HEPt2",      "_HEPt3",      "_HEPt4",      "_HEPt5",
-      "_HF",       "_HFPt300",      //"_HFPt0",      "_HFPt1",      "_HFPt2",      "_HFPt3",      "_HFPt4",      "_HFPt5",
+      "_EtaIncl",
+      "_EtaInclPt300",  //"_EtaInclPt0", "_EtaInclPt1", "_EtaInclPt2", "_EtaInclPt3", "_EtaInclPt4", "_EtaInclPt5",
+      "_Eta2p5",
+      "_Eta2p5Pt300",  //"_Eta2p5Pt0",  "_Eta2p5Pt1",  "_Eta2p5Pt2",  "_Eta2p5Pt3",  "_Eta2p5Pt4",  "_Eta2p5Pt5",
+      "_HB",
+      "_HBPt300",  //"_HBPt0",      "_HBPt1",      "_HBPt2",      "_HBPt3",      "_HBPt4",      "_HBPt5",
+      "_HE",
+      "_HEPt300",  //"_HEPt0",      "_HEPt1",      "_HEPt2",      "_HEPt3",      "_HEPt4",      "_HEPt5",
+      "_HF",
+      "_HFPt300",  //"_HFPt0",      "_HFPt1",      "_HFPt2",      "_HFPt3",      "_HFPt4",      "_HFPt5",
   };
 
   // histogram: events counter
@@ -38,24 +43,25 @@ void JetMETPerformanceAnalysisDriver::init() {
   addTH2D("nPU__vs__nCTie4", 40, 0, 120, 48, 0, 240);
 
   labelMap_jetAK4_ = {
-//      {"GenJet", {}},
+      //      {"GenJet", {}},
       {"GenJetNoMu",
-       {{"L1T", "L1EmulJet"},
-//        {"L1T1", "L1EmulJet1"},
-        {"L1CT0", "L1EmulAK4CTJet0"},
-        {"L1CT0CorrA", "L1EmulAK4CTJet0CorrA"},
-        {"L1CT0CorrB", "L1EmulAK4CTJet0CorrB"},
-        {"L1CT0CorrC", "L1EmulAK4CTJet0CorrC"},
-//        {"L1CT1", "L1EmulAK4CTJet1"},
-      }},
+       {
+           {"L1T", "L1EmulJet"},
+           //        {"L1T1", "L1EmulJet1"},
+           {"L1CT0", "L1EmulAK4CTJet0"},
+           {"L1CT0CorrA", "L1EmulAK4CTJet0CorrA"},
+           {"L1CT0CorrB", "L1EmulAK4CTJet0CorrB"},
+           {"L1CT0CorrC", "L1EmulAK4CTJet0CorrC"},
+           //        {"L1CT1", "L1EmulAK4CTJet1"},
+       }},
       {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
-//      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+      //      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
       {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
       {"L1EmulAK4CTJet0CorrB", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
       {"L1EmulAK4CTJet0CorrC", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
-//      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
-//      {"Jet", {}},
+      //      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}, {"L1T", "L1EmulJet"}}},
+      //      {"Jet", {}},
   };
 
   labelMap_jetAK8_ = {};

@@ -7,8 +7,7 @@
 
 class Object {
 public:
-  Object(int a, int b, int c, int d, int e)
-    : a_(a), b_(b), c_(c), d_(d), e_(e) {}
+  Object(int a, int b, int c, int d, int e) : a_(a), b_(b), c_(c), d_(d), e_(e) {}
 
 private:
   int a_;
@@ -18,7 +17,7 @@ private:
   int e_;
 };
 
-int main () {
+int main() {
   unsigned int const nOrbits = 1500;
   unsigned int const nBXsPerOrbit = 3564;
   unsigned int const nBXs = nOrbits * nBXsPerOrbit;

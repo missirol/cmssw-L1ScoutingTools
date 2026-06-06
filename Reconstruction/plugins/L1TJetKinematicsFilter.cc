@@ -46,8 +46,8 @@ bool L1TJetKinematicsFilter::filter(edm::StreamID, edm::Event& iEvent, edm::Even
     for (auto idx = 0u; idx < nInputs; ++idx) {
       auto jet = inputs.at(bx, idx);
       auto const jetAbsEta = std::abs(jet.eta());
-      if ((absEtaMin_ < 0 or jetAbsEta > absEtaMin_) and
-          (absEtaMax_ < 0 or jetAbsEta < absEtaMax_) and jet.pt() > ptMin_) {
+      if ((absEtaMin_ < 0 or jetAbsEta > absEtaMin_) and (absEtaMax_ < 0 or jetAbsEta < absEtaMax_) and
+          jet.pt() > ptMin_) {
         ++nJets;
       }
     }

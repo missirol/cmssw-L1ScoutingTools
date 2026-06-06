@@ -13,6 +13,7 @@ public:
     val3_ = val;
     val4_ = val;
   }
+
 private:
   int val0_;
   int val1_;
@@ -21,7 +22,7 @@ private:
   int val4_;
 };
 
-template<class ObjType>
+template <class ObjType>
 class OrbitCollection1 {
 public:
   OrbitCollection1() {}
@@ -44,11 +45,12 @@ public:
       }
     }
   }
+
 private:
   std::vector<ObjType> data_;
 };
 
-template<class ObjType>
+template <class ObjType>
 class OrbitCollection2 {
 public:
   OrbitCollection2() {}
@@ -74,12 +76,12 @@ public:
       }
     }
   }
+
 private:
   std::vector<ObjType> data_;
 };
 
 int main() {
-
   using ObjectOrbitCollection2 = OrbitCollection2<Object>;
 
   unsigned int constexpr nEvents = 1000;
@@ -94,7 +96,6 @@ int main() {
   {
     auto startTime = std::chrono::steady_clock::now();
     for (auto ev = 0u; ev < nEvents; ++ev) {
-
       std::vector<std::vector<Object>> vec(ObjectOrbitCollection2::kBxArraySize);
 
       for (auto idx = 0u; idx < vec.size(); ++idx) {
@@ -121,7 +122,6 @@ int main() {
   {
     auto startTime = std::chrono::steady_clock::now();
     for (auto ev = 0u; ev < nEvents; ++ev) {
-
       ObjectOrbitCollection2::BxArray arr;
 
       for (auto idx = 0u; idx < arr.size(); ++idx) {

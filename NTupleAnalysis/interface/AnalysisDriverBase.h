@@ -123,8 +123,8 @@ T const& AnalysisDriverBase::value(const std::string& key) const {
     if (not hasTTreeReaderValue(key)) {
       ss_str << "value -- no branch named \"" << key << "\".";
     } else {
-      ss_str << "value -- dynamic_cast to \"TTreeReaderValue<"
-             << typeid(T).name() << ">*\" failed for key \"" << key << "\".";
+      ss_str << "value -- dynamic_cast to \"TTreeReaderValue<" << typeid(T).name() << ">*\" failed for key \"" << key
+             << "\".";
     }
     throw std::runtime_error(ss_str.str());
   }
@@ -156,8 +156,8 @@ TTreeReaderArray<T> const& AnalysisDriverBase::array(const std::string& key) con
     if (not hasTTreeReaderValue(key)) {
       ss_str << "array -- no branch named \"" << key << "\".";
     } else {
-      ss_str << "array -- dynamic_cast to \"TTreeReaderValue<"
-             << typeid(T).name() << ">*\" failed for key \"" << key << "\".";
+      ss_str << "array -- dynamic_cast to \"TTreeReaderValue<" << typeid(T).name() << ">*\" failed for key \"" << key
+             << "\".";
     }
     throw std::runtime_error(ss_str.str());
   }
@@ -189,8 +189,8 @@ std::vector<T> const& AnalysisDriverBase::vector(const std::string& key) const {
     if (not hasTTreeReaderValue(key)) {
       ss_str << "vector -- no branch named \"" << key << "\".";
     } else {
-      ss_str << "vector -- dynamic_cast to \"TTreeReaderValue<std::vector<"
-             << typeid(T).name() << ">>*\" failed for key \"" << key << "\".";
+      ss_str << "vector -- dynamic_cast to \"TTreeReaderValue<std::vector<" << typeid(T).name()
+             << ">>*\" failed for key \"" << key << "\".";
     }
     throw std::runtime_error(ss_str.str());
   }

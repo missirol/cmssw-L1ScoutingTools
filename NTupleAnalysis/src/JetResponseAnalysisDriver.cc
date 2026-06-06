@@ -25,12 +25,9 @@ void JetResponseAnalysisDriver::init() {
     return ret;
   };
 
-  std::vector<float> eta_v = {
-    0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f,
-    1.5f, 1.7f, 1.9f, 2.1f, 2.3f, 2.5f, 2.7f,
-    3.0f, 3.3f, 3.6f, 4.0f, 4.5f, 5.0f
-  };
-  { // add negative-eta values
+  std::vector<float> eta_v = {0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f, 1.3f, 1.5f, 1.7f, 1.9f,
+                              2.1f, 2.3f, 2.5f, 2.7f, 3.0f, 3.3f, 3.6f, 4.0f, 4.5f, 5.0f};
+  {  // add negative-eta values
     auto const eta_v_size0{eta_v.size()};
     for (auto idx = 1u; idx < eta_v_size0; ++idx) {
       auto const idx_offset{eta_v.size() - eta_v_size0};
@@ -85,12 +82,12 @@ void JetResponseAnalysisDriver::init() {
 
   labelMap_jetAK4_ = {
       {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
-//      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
+      //      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0CorrB", {{"GEN", "GenJetNoMu"}}},
       {"L1EmulAK4CTJet0CorrC", {{"GEN", "GenJetNoMu"}}},
-//      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
+      //      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
   };
 
   for (auto const& selLabel : {"NoSelection"}) {
@@ -243,7 +240,9 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
               binEdges_response,
               binEdges_pt);
 
-      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt", binEdges_pt, binEdges_pt);
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt",
+              binEdges_pt,
+              binEdges_pt);
 
       addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__E",
               binEdges_response,
@@ -260,7 +259,9 @@ void JetResponseAnalysisDriver::bookHistograms_Jets(const std::string& dir,
               binEdges_response,
               binEdges_E);
 
-      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E", binEdges_E, binEdges_E);
+      addTH2D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E",
+              binEdges_E,
+              binEdges_E);
 
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_E", binEdges_E);
       addTH1D(dirPrefix + jetType + catLabel + "_MatchedTo" + matchLabel + "_pt", binEdges_pt);
@@ -393,7 +394,8 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
       }
 
       auto const a_match_mass_val = a_match_mass ? (*a_match_mass)[idx] : 0.f;
-      v_match_E.emplace_back(corr * std::sqrt(std::pow(a_match_pt[idx] * std::cosh(a_match_eta[idx]), 2) + std::pow(a_match_mass_val, 2)));
+      v_match_E.emplace_back(
+          corr * std::sqrt(std::pow(a_match_pt[idx] * std::cosh(a_match_eta[idx]), 2) + std::pow(a_match_mass_val, 2)));
       v_match_pt.emplace_back(corr * a_match_pt[idx]);
       v_match_eta.emplace_back(a_match_eta[idx]);
       v_match_phi.emplace_back(a_match_phi[idx]);
@@ -485,11 +487,10 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
           assert(false);
         }
 
-        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel +
-           "__vs__E")
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__E")
             ->Fill(jetERatio, jetE, weight);
-        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel +
-           "__vs__" + matchLabel + "_E")
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_over" + matchLabel + "__vs__" +
+           matchLabel + "_E")
             ->Fill(jetERatio, jetMatchE, weight);
 
         H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E_" + matchLabel +
@@ -499,7 +500,8 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
            "overREC__vs__" + matchLabel + "_E")
             ->Fill(jetERatio2, jetMatchE, weight);
 
-        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E")->Fill(jetE, jetMatchE, weight);
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E__vs__" + matchLabel + "_E")
+            ->Fill(jetE, jetMatchE, weight);
 
         H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt_over" + matchLabel +
            "__vs__pt")
@@ -515,7 +517,8 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
            "overREC__vs__" + matchLabel + "_pt")
             ->Fill(jetPtRatio2, jetMatchPt, weight);
 
-        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt")->Fill(jetPt, jetMatchPt, weight);
+        H2(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt__vs__" + matchLabel + "_pt")
+            ->Fill(jetPt, jetMatchPt, weight);
 
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_E")->Fill(jetE, weight);
         H1(dirPrefix + fhData.jetCollection + catLabel + "_MatchedTo" + matchLabel + "_pt")->Fill(jetPt, weight);
