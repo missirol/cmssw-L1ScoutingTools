@@ -74,7 +74,7 @@ def command_output_lines(cmd, stdout=True, stderr=False, permissive=False):
 def group_consecutive(nums):
     if not nums:
         return []
-    
+
     sorted_nums = sorted(set(nums))
     groups = []
     start = end = sorted_nums[0]
@@ -89,16 +89,11 @@ def group_consecutive(nums):
     groups.append([start, end])
     return groups
 
-def overlap(groups1, groups2):
-    # Expand each group list back to full set of integers
-    def expand(groups):
-        result = set()
-        for g in groups:
-            result.update(range(g[0], g[-1] + 1))
-        return result
-
-    common = groups1 & expand(groups2)
-    return group_consecutive(common)
+def expand(groups):
+    result = set()
+    for g in groups:
+        result.update(range(g[0], g[-1] + 1))
+    return result
 
 def run_brilcalc(brilcalc_cmd):
     result = subprocess.run(["bash"],
@@ -112,21 +107,80 @@ source /cvmfs/cms-bril.cern.ch/cms-lumi-pog/brilws-docker/brilws-env
     )
     return (result.stdout, result.stderr)
 
+def runIsGood_without_rereco(pd_name, run_number):
+    if pd_name == 'L1Scouting':
+        return (run_number >= 403655)
+    elif pd_name == 'L1ScoutingSelection':
+        return (run_number >= 403681)
+    else:
+        raise RuntimeError(f'Invalid type of L1-Scouting data set: {pd_name}')
+
+def runIsGood_with_rereco(pd_name, run_number):
+    # Calo-Layer1 readout disabled in the L1-Scouting system
+    if run_number >= 402698 and run_number <= 403164:
+        return False
+
+    if pd_name == 'L1Scouting':
+        # Runs in which CaloTowers were included in the event content of the L1Scouting PD
+        return (run_number >= 401279)
+    elif pd_name == 'L1ScoutingSelection':
+        # Runs in which firmware fixes for orbit and BX counters of CaloL1 data were deployed online
+        return (run_number >= 403259 and run_number < 403462) or (run_number >= 403552 and run_number < 403655) or run_number >= 403681
+    else:
+        raise RuntimeError(f'Invalid type of L1-Scouting data set: {pd_name}')
+
+def prescaleFactor(pd_name, run_number):
+    if pd_name == 'L1ScoutingSelection':
+        return 1
+    elif pd_name != 'L1Scouting':
+        raise RuntimeError(f'Invalid dataset name: {pd_name}')
+
+    if run_number >= 401279 and run_number <= 403753:
+        return 15
+    elif run_number >= 403754:
+        return 7
+    else:
+        raise RuntimeError(f'Invalid run number: {run_number}')
+
+def recorded_luminosity(input_dict, normtag, json_file_prefix, verbose = False):
+    ret = 0
+
+    for psFactor in input_dict:
+        jsonLabel = json_file_prefix
+        if psFactor > 1:
+            jsonLabel += f'_prescale{psFactor:02d}'
+
+        json.dump(input_dict[psFactor], open(f'{jsonLabel}.json', 'w'), sort_keys=True, indent=4)
+
+        # Extract value of recorded luminosity from brilcalc output
+        brilcalc_cmd = f'brilcalc lumi -u /fb -c web -b "STABLE BEAMS"'
+        brilcalc_cmd += f' --normtag {normtag}' * (normtag is not None)
+        brilcalc_cmd += f' -i {jsonLabel}.json 2>&1 | tee {jsonLabel}.log'
+        if verbose:
+            print(f'  {brilcalc_cmd}')
+
+        stdout, stderr = run_brilcalc(brilcalc_cmd)
+        stdout_lines = stdout.split('\n')
+        lumi_rec = float(stdout_lines[stdout_lines.index('#Summary: ')+4].replace('|','').split()[5])
+        lumi_rec /= psFactor
+        if verbose:
+            print(f'    ({lumi_rec:.4f} /fb)')
+        ret += lumi_rec
+
+    return ret
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description = 'Convert a set of Scouting Raw Data (SRD) files into one EDM file',
+        description = 'Create JSON files to reprocess L1-Scouting CaloL1 data of 2026',
         formatter_class = argparse.ArgumentDefaultsHelpFormatter
     )
 
     parser.add_argument('-i', '--dqm-json', type=str, default='/eos/user/c/cmsdqm/www/CAF/certification/Collisions26/Collisions26_MLEnhancedGolden_Latest.json',
         help='Path to json file with lumisections certified as good for physics analysis')
 
-    parser.add_argument('-d', '--dataset', type=str, default='/L1Scouting*/Run2026*/L1SCOUT',
-        help='Dataset name passed to dasgoclient, it can include "*" wildcards')
-
-    parser.add_argument('-r', '--dataset-regex', type=str, default='/L1Scouting(|Selection)/Run2026(B|D)-v[0-9]+/L1SCOUT',
-        help='Regular expression used to select the datasets returned by dasgoclient')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+        help='Verbose output to stdout')
 
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('-n', '--normtag', dest='normtag', type=str, default='/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json',
@@ -143,144 +197,120 @@ if __name__ == '__main__':
     stdout_delimiter = '-'*150
 
     print(stdout_delimiter)
-
     print(f'Certified luminosity sections: {args.dqm_json}')
-    print(f'Data sets: {args.dataset} (regex: {args.dataset_regex})')
-
     print(stdout_delimiter)
 
     dqm_json = json.load(open(args.dqm_json))
 
     out_lines = []
 
-    ###
-    ### Should this run be skipped?
-    ###
-    def skipRun(run_number, isL1ScoutingSelection):
-        # CaloTowers included in the L1ScoutingSelection stream only from run-401676
-        if isL1ScoutingSelection and run_number <= 401676:
-            return True
-        # Firmware fixes for both orbit and BX numbers of CaloTowers deployed online
-        if isL1ScoutingSelection and not ((403259 <= run_number and run_number < 403462) or (403552 <= run_number and run_number < 403655) or run_number >= 403681):
-            return True
-        # Non-standard proton-proton runs (PU~5, PU~150, sqrt(s)=2.4 TeV)
-        if run_number >= 402514 and run_number <= 403422:
-            return True
-        # CaloLayer-1 readout disabled in the L1-Scouting system
-        if run_number >= 402698 and run_number <= 403164:
-            return True
-        return False
+    l1s_types = ['L1Scouting', 'L1ScoutingSelection']
 
-    ###
-    ### What is the prescale factor of the L1Scouting stream in this run?
-    ###
-    def prescaleFactor_L1Scouting(run_number):
-        psFactor = -1
+    l1sReRecoDict = {}
 
-        if run_number >= 401279 and run_number <= 403753:
-            psFactor = 15
+    for era in ['Run2026B', 'Run2026D']:
+        if args.verbose:
+            print(era)
 
-        elif run_number >= 403754:
-            psFactor = 7
+        jsonDict = dict()
+        for l1s_type in l1s_types:
+            jsonDict[l1s_type] = dict()
+            json_dict = jsonDict[l1s_type]
+            datasetExpr = f'/{l1s_type}/{era}-*/L1SCOUT'
 
-        return psFactor
+            datasets = command_output_lines(f'dasgoclient -query "dataset={datasetExpr}" status=VALID')
+            datasets = sorted(list(set([foo for foo in datasets if foo])))
 
-    datasets = command_output_lines(f'dasgoclient -query "dataset={args.dataset}" status=VALID')
-    datasets = sorted(list(set([foo for foo in datasets if re.match(args.dataset_regex, foo)])))
-    for dataset in datasets:
-        print(dataset)
+            if len(datasets) != 1:
+                raise RuntimeError(f'Unexpected number of primary data sets: {datasets}')
 
-        das_query = f'dasgoclient -query "file,run,lumi dataset={dataset}"'
-        frl_lines = [foo for foo in command_output_lines(das_query) if foo]
+            if args.verbose:
+                print(f'  {datasets[0]}')
 
-        out_dict = dict()
+            for dataset in datasets:
+                das_query = f'dasgoclient -query "file,run,lumi dataset={dataset}"'
+                frl_lines = [foo for foo in command_output_lines(das_query) if foo]
 
-        for frl_line in frl_lines:
-            frl_line_split = frl_line.split()
-            if len(frl_line_split) != 3:
-                raise RuntimeError(f'invalid output for DAS query "{das_query}" (number of entries different from 3): {frl_line}')
+                for frl_line in frl_lines:
+                    frl_line_split = frl_line.split()
+                    if len(frl_line_split) != 3:
+                        raise RuntimeError(f'invalid output for DAS query "{das_query}" (number of entries different from 3): {frl_line}')
 
-            runNumber = frl_line_split[1]
-            try:
-                int(runNumber)
-            except:
-                raise RuntimeError(f'invalid output for DAS query "{das_query}" (run number cannot be converted to an integer): {frl_line}')
+                    runNumber = frl_line_split[1]
+                    try:
+                        int(runNumber)
+                    except:
+                        raise RuntimeError(f'invalid output for DAS query "{das_query}" (run number cannot be converted to an integer): {frl_line}')
 
-            if runNumber not in out_dict:
-                out_dict[runNumber] = set()
+                    if runNumber not in json_dict:
+                        json_dict[runNumber] = set()
 
-            lumis_str = frl_line_split[2]
-            if not (lumis_str.startswith('[') and lumis_str.endswith(']')):
-                raise RuntimeError(f'invalid output for DAS query "{das_query}" (invalid format for list of luminosity blocks): {frl_line}')
-            for lumi_str in lumis_str[1:-1].split(','):
-                out_dict[runNumber].add(int(lumi_str))
+                    lumis_str = frl_line_split[2]
+                    if not (lumis_str.startswith('[') and lumis_str.endswith(']')):
+                        raise RuntimeError(f'invalid output for DAS query "{das_query}" (invalid format for list of luminosity blocks): {frl_line}')
+                    for lumi_str in lumis_str[1:-1].split(','):
+                        json_dict[runNumber].add(int(lumi_str))
+
+        if args.verbose:
+            print(f'  Finding LSs common to both L1-Scouting PDs...')
+
+        # JSON-type dict containing LSs certified as good by DQM, and present in both L1-Scouting PDs
+        l1sDict = {}
+        for runNumber in jsonDict['L1Scouting']:
+            if runNumber in jsonDict['L1ScoutingSelection'] and runNumber in dqm_json:
+                common_lumis = jsonDict['L1Scouting'][runNumber] & jsonDict['L1ScoutingSelection'][runNumber] & expand(dqm_json[runNumber])
+                if common_lumis:
+                    l1sDict[runNumber] = group_consecutive(common_lumis)
+
+        if args.verbose:
+            print(f'  Creating output JSON files, and running brilcalc...')
 
         ###
         ### "ret": main output dictionary.
         ###  - key: prescale factor of the L1Scouting stream.
-        ###  - value: dictionary with runs and luminosity-blocks.
+        ###  - value: dictionary with runs and luminosity sections.
         ###
-        ret = dict()
+        for l1s_type in ['L1Scouting', 'L1ScoutingSelection']:
+            ret1, ret2, ret3 = dict(), dict(), dict()
+            for runNumber in l1sDict:
+                runNumber_int = int(runNumber)
+                psFactor = prescaleFactor(l1s_type, runNumber_int)
 
-        for runNumber in out_dict:
-            runNumber_int = int(runNumber)
+                if psFactor not in ret1:
+                    ret1[psFactor] = dict()
+                ret1[psFactor][runNumber] = l1sDict[runNumber]
 
-            # Skip runs within any of the excluded-runs ranges
-            if skipRun(runNumber_int, dataset.startswith('/L1ScoutingSelection/')):
-                continue
+                if runIsGood_without_rereco(l1s_type, runNumber_int):
+                    if psFactor not in ret2:
+                        ret2[psFactor] = dict()
+                    ret2[psFactor][runNumber] = l1sDict[runNumber]
 
-            # Skip runs that are not certified as good for physics
-            if runNumber not in dqm_json:
-                continue
+                if runIsGood_with_rereco(l1s_type, runNumber_int):
+                    if psFactor not in ret3:
+                        ret3[psFactor] = dict()
+                    ret3[psFactor][runNumber] = l1sDict[runNumber]
 
-            common_lumis = overlap(out_dict[runNumber], dqm_json[runNumber])
-            if common_lumis:
+                    if l1s_type not in l1sReRecoDict:
+                        l1sReRecoDict[l1s_type] = dict()
+                    l1sReRecoDict[l1s_type][runNumber] = l1sDict[runNumber]
 
-                if dataset.startswith('/L1Scouting/'):
-                    psFactor = prescaleFactor_L1Scouting(runNumber_int)
-                elif dataset.startswith('/L1ScoutingSelection/'):
-                    psFactor = 1
-                else:
-                    raise RuntimeError(f'Invalid dataset name: {dataset}')
+            # Total recorded luminosity in inverse femtobarns (/fb)
+            lumiRec1 = recorded_luminosity(input_dict = ret1, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_certCaloOnly')
+            lumiRec2 = recorded_luminosity(input_dict = ret2, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithoutReReco')
+            lumiRec3 = recorded_luminosity(input_dict = ret3, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithReReco')
 
-                if psFactor > 0:
-                    if psFactor not in ret:
-                        ret[psFactor] = dict()
-                    ret[psFactor][runNumber] = common_lumis
+            lumiRec2 *= caloTowersFraction
+            lumiRec3 *= caloTowersFraction
 
-        # Total recorded luminosity in inverse femtobarns (/fb)
-        lumiRecorded_ifb = 0
-
-        for psFactor in ret:
-            if not ret[psFactor]:
-                continue
-
-            jsonLabel = f'caloTowersJson2026' + dataset.replace('/', '_')
-            if psFactor > 1:
-                jsonLabel += f'_prescale{psFactor:02d}'
-
-            json.dump(ret[psFactor], open(f'{jsonLabel}.json', 'w'), sort_keys=True, indent=4)
-
-            # Extract value of recorded luminosity from brilcalc output
-            brilcalc_cmd = f'brilcalc lumi -u /fb -c web -b "STABLE BEAMS"'
-            brilcalc_cmd += f' --normtag {args.normtag}' * (args.normtag is not None)
-            brilcalc_cmd += f' -i {jsonLabel}.json 2>&1 | tee {jsonLabel}.log'
-            print(f'  {brilcalc_cmd}')
-
-            stdout, stderr = run_brilcalc(brilcalc_cmd)
-            stdout_lines = stdout.split('\n')
-            ret_lumiRecorded_ifb = float(stdout_lines[stdout_lines.index('#Summary: ')+4].replace('|','').split()[5])
-
-            # Apply prescale factor for CaloTowers (fraction of timeslices, prescale factor of the L1Scouting stream)
-            ret_lumiRecorded_ifb *= caloTowersFraction
-            ret_lumiRecorded_ifb /= psFactor
-            print(f'    ({ret_lumiRecorded_ifb:.4f} /fb)')
-
-            lumiRecorded_ifb += ret_lumiRecorded_ifb
-
-        out_lines += [f'{dataset:<30} {lumiRecorded_ifb:10.4f}']
+            out_lines += [f'{era:<10} {l1s_type:<30} {lumiRec1:10.4f} {lumiRec2:10.4f} {lumiRec3:10.4f}']
 
     print(stdout_delimiter)
+    print('')
+    print('Era, L1-Scouting data set, Lumi (a) [/fb], Lumi (b) [/fb], Lumi (c) [/fb] ')
+    print('  (a) Passing Calo-only certification, and requiring a given LS to be present in both L1-Scouting PDs')
+    print('  (b) Usable for physics analysis with L1-Scouting CaloTowers without reprocessing the L1SCOUT data tier')
+    print('  (c) Usable for physics analysis with L1-Scouting CaloTowers after a reprocessing of the L1SCOUT data tier')
+    print('')
 
     for out_line in sorted(out_lines):
         print(out_line)
