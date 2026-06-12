@@ -254,7 +254,7 @@ if __name__ == '__main__':
         if args.verbose:
             print(f'  Finding LSs common to both L1-Scouting PDs...')
 
-        # JSON-type dict containing LSs certified as good by DQM, and present in both L1-Scouting PDs
+        # l1sDict: JSON-type dict containing LSs certified as good by DQM, and present in both L1-Scouting PDs
         l1sDict = {}
         for runNumber in jsonDict['L1Scouting']:
             if runNumber in jsonDict['L1ScoutingSelection'] and runNumber in dqm_json:
@@ -265,39 +265,38 @@ if __name__ == '__main__':
         if args.verbose:
             print(f'  Creating output JSON files, and running brilcalc...')
 
-        ###
-        ### "ret": main output dictionary.
-        ###  - key: prescale factor of the L1Scouting stream.
-        ###  - value: dictionary with runs and luminosity sections.
-        ###
-        for l1s_type in ['L1Scouting', 'L1ScoutingSelection']:
-            ret1, ret2, ret3 = dict(), dict(), dict()
+        # runDict*: dicts with prescale factor as key, for different data-quality criteria.
+        #  - (1): LS passes calo-only certification, and is present in both L1S PDs.
+        #  - (2): satisfies (1), and is good for physics analysis with L1S CaloTowers without reprocessing the L1SCOUT data tier.
+        #  - (3): satisfies (1), and is good for physics analysis with L1S CaloTowers after a reprocessing of the L1SCOUT data tier.
+        for l1s_type in l1s_types:
+            runDict1, runDict2, runDict3 = dict(), dict(), dict()
             for runNumber in l1sDict:
                 runNumber_int = int(runNumber)
                 psFactor = prescaleFactor(l1s_type, runNumber_int)
 
-                if psFactor not in ret1:
-                    ret1[psFactor] = dict()
-                ret1[psFactor][runNumber] = l1sDict[runNumber]
+                if psFactor not in runDict1:
+                    runDict1[psFactor] = dict()
+                runDict1[psFactor][runNumber] = l1sDict[runNumber]
 
                 if runIsGood_without_rereco(l1s_type, runNumber_int):
-                    if psFactor not in ret2:
-                        ret2[psFactor] = dict()
-                    ret2[psFactor][runNumber] = l1sDict[runNumber]
+                    if psFactor not in runDict2:
+                        runDict2[psFactor] = dict()
+                    runDict2[psFactor][runNumber] = l1sDict[runNumber]
 
                 if runIsGood_with_rereco(l1s_type, runNumber_int):
-                    if psFactor not in ret3:
-                        ret3[psFactor] = dict()
-                    ret3[psFactor][runNumber] = l1sDict[runNumber]
+                    if psFactor not in runDict3:
+                        runDict3[psFactor] = dict()
+                    runDict3[psFactor][runNumber] = l1sDict[runNumber]
 
                     if l1s_type not in l1sReRecoDict:
                         l1sReRecoDict[l1s_type] = dict()
                     l1sReRecoDict[l1s_type][runNumber] = l1sDict[runNumber]
 
             # Total recorded luminosity in inverse femtobarns (/fb)
-            lumiRec1 = recorded_luminosity(input_dict = ret1, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_certCaloOnly')
-            lumiRec2 = recorded_luminosity(input_dict = ret2, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithoutReReco')
-            lumiRec3 = recorded_luminosity(input_dict = ret3, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithReReco')
+            lumiRec1 = recorded_luminosity(input_dict = runDict1, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_certCaloOnly')
+            lumiRec2 = recorded_luminosity(input_dict = runDict2, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithoutReReco')
+            lumiRec3 = recorded_luminosity(input_dict = runDict3, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithReReco')
 
             lumiRec2 *= caloTowersFraction
             lumiRec3 *= caloTowersFraction
@@ -314,5 +313,12 @@ if __name__ == '__main__':
 
     for out_line in sorted(out_lines):
         print(out_line)
+
+    print(stdout_delimiter)
+
+    for l1s_type in l1s_types:
+        out_json_file = f'caloTowersJson2026_{l1s_type}_goodWithReReco.json'
+        json.dump(l1sReRecoDict[l1s_type], open(f'{out_json_file}', 'w'), sort_keys=True, indent=4)
+        print(f'Output JSON file: {out_json_file}')
 
     print(stdout_delimiter)
