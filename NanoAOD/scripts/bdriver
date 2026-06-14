@@ -12,15 +12,18 @@ import json
 import datetime
 
 from L1ScoutingTools.NanoAOD.common import *
-from L1ScoutingTools.NanoAOD.das import load_dataset_data, skim_das_jsondump
+from L1ScoutingTools.NanoAOD.das import *
 
-#### main
+###
+### main
+###
 if __name__ == '__main__':
    ### args
    parser = argparse.ArgumentParser(
-    prog='./'+os.path.basename(__file__),
-    formatter_class=argparse.RawDescriptionHelpFormatter,
-    description=__doc__)
+       prog='./'+os.path.basename(__file__),
+       formatter_class=argparse.RawDescriptionHelpFormatter,
+       description=__doc__
+   )
 
    parser.add_argument('-c', '--cfg', dest='cmsRun_cfg', action='store', default=None, required=True,
                        help='path to cmsRun cfg file')
@@ -37,14 +40,23 @@ if __name__ == '__main__':
    parser.add_argument('--customize-cfg', dest='customize_cfg', action='store_true', default=False,
                        help='append minimal customization to cmsRun-cfg required by the driver')
 
+   parser.add_argument('--data', dest='data', action='store_true', default=False,
+                       help='Specify this to create one job per luminosity section')
+
+   parser.add_argument('--json', dest='json_file', action='store', default=None,
+                       help='Path to JSON file to select a subset of luminosity sections')
+
    parser.add_argument('-j', '--jobdirname', dest='jobdirname', action='store', default='job',
                        help='prefix of batch-job sub-directories (example: [JOBDIRNAME]_[counter]/)')
 
    parser.add_argument('-f', '--max-files', dest='max_files', action='store', type=int, default=-1,
                        help='maximum number of input files to be processed (if integer is negative, all files will be processed)')
 
+   parser.add_argument('-l', '--max-lumis', dest='max_lumis', action='store', type=int, default=-1,
+                       help='maximum number of luminosity sections to be processed, used only if --data is specified (if integer is negative, all luminosity sections will be processed)')
+
    parser.add_argument('-m', '--max-events', dest='max_events', action='store', type=int, default=-1,
-                       help='maximum number of total input events to be processed (if integer is negative, all events will be processed)')
+                       help='maximum number of total input events to be processed (if negative, all events will be processed)')
 
    parser.add_argument('-n', '--n-events', dest='n_events', action='store', type=int, default=-1,
                        help='maximum number of events per job')
@@ -55,14 +67,14 @@ if __name__ == '__main__':
    parser.add_argument('-b', '--batch-system', dest='batch_system', action='store', default='auto', choices=['auto', 'htc', 'slurm'],
                        help='keyword to select batch system (default: "auto")')
 
-   parser.add_argument('--cpus', dest='cpus', action='store', default='1',
+   parser.add_argument('--cpus', dest='cpus', action='store', type=int, default=1,
                        help='number of CPUs per job (HTCondor: "RequestCpus"; SLURM: "--cpus-per-task")')
 
-   parser.add_argument('--memory', dest='memory', action='store', default='50M',
+   parser.add_argument('--memory', dest='memory', action='store', default=None,
                        help='job max memory (HTCondor: "RequestMemory"; SLURM: "--mem")')
 
-   parser.add_argument('-t', '--time', dest='time', action='store', default='01:00:00',
-                       help='job runtime in number of seconds or HH:MM:SS format (HTCondor: "+RequestRuntime"; SLURM: "--time")')
+   parser.add_argument('-t', '--time', dest='time', action='store', default=None,
+                       help='job runtime in number of seconds, or HH:MM:SS format (HTCondor: "+RequestRuntime"; SLURM: "--time")')
 
    parser.add_argument('-q', '--queue', dest='queue', action='store', default='standard',
                        help='name of partition on the batch system (SLURM: "--partition")')
@@ -98,13 +110,13 @@ if __name__ == '__main__':
 
    ### opts --------------------
    if 'CMSSW_BASE' not in os.environ:
-     KILL(log_prx+'global variable CMSSW_BASE is not defined (set up CMSSW environment with "cmsenv" before submitting jobs)')
+       KILL(log_prx+'global variable CMSSW_BASE is not defined (set up CMSSW environment with "cmsenv" before submitting jobs)')
 
    if not os.path.isfile(opts.cmsRun_cfg):
-     KILL(log_prx+'invalid path to cmsRun cfg file [-c]: '+str(opts.cmsRun_cfg))
+       KILL(log_prx+'invalid path to cmsRun cfg file [-c]: '+str(opts.cmsRun_cfg))
 
    if os.path.exists(opts.output_dir):
-     KILL(log_prx+'target path to output directory already exists [-o]: '+str(opts.output_dir))
+       KILL(log_prx+'target path to output directory already exists [-o]: '+str(opts.output_dir))
 
    OUTPUT_DIR = os.path.abspath(opts.output_dir)
 
@@ -117,78 +129,85 @@ if __name__ == '__main__':
        OUTPUT_DIR_CMSRUN = os.path.abspath(OUTPUT_DIR_CMSRUN)
 
    if opts.n_events == 0:
-     KILL(log_prx+'logic error: requesting zero events per job (use non-zero value for argument of option "-n")')
-
-#   is_slc7_arch = False
-#   if os.environ['SCRAM_ARCH'].startswith('slc7'): is_slc7_arch = True
-#   else:
-#     KILL(log_prx+'could not infer architecture from environment variable "SCRAM_ARCH": '+str(os.environ['SCRAM_ARCH']))
+       KILL(log_prx+'logic error: requesting zero events per job (use non-zero value for argument of option "-n")')
 
    if opts.max_events == 0:
-     KILL(log_prx+'logic error: requesting a maximum of zero input events (use non-zero value for argument of option --max-events/-m)')
+       KILL(log_prx+'logic error: requesting a maximum of zero input events (use non-zero value for argument of option --max-events/-m)')
 
    if opts.max_files == 0:
-     KILL(log_prx+'logic error: requesting a maximum of zero input files (use non-zero value for argument of option --max-files/-f)')
+       KILL(log_prx+'logic error: requesting a maximum of zero input files (use non-zero value for argument of option --max-files/-f)')
 
-   try:
-     time_mins, time_secs = divmod(int(opts.time), 60)
-     time_hours, time_mins = divmod(time_mins, 60)
-     TIME_STR_hhmmss = '{:d}:{:02d}:{:02d}'.format(time_hours,time_mins, time_secs)
-     TIME_STR_secs = opts.time
-   except:
-     try:
-       TIME_STR_blocks = opts.time.split(':')
-       assert (len(TIME_STR_blocks) == 3)
-       TIME_STR_hhmmss = opts.time
-       TIME_STR_secs = str(int(TIME_STR_blocks[0])*3600 + int(TIME_STR_blocks[1])*60 + int(TIME_STR_blocks[2]))
-     except:
-       KILL(log_prx+'invalid format for maximum runtime [--time/-t]: '+opts.time)
+   if opts.time is not None:
+       try:
+           time_mins, time_secs = divmod(int(opts.time), 60)
+           time_hours, time_mins = divmod(time_mins, 60)
+           TIME_STR_hhmmss = '{:d}:{:02d}:{:02d}'.format(time_hours,time_mins, time_secs)
+           TIME_STR_secs = opts.time
+       except:
+           try:
+               TIME_STR_blocks = opts.time.split(':')
+               assert (len(TIME_STR_blocks) == 3)
+               TIME_STR_hhmmss = opts.time
+               TIME_STR_secs = str(int(TIME_STR_blocks[0])*3600 + int(TIME_STR_blocks[1])*60 + int(TIME_STR_blocks[2]))
+           except:
+               KILL(log_prx+'invalid format for maximum runtime [--time/-t]: '+opts.time)
 
    if opts.batch_system == 'htc':
-     try: which('condor_q')
-     except: KILL(log_prx+'selected HTCondor batch system, but the executable "condor_q" is not available')
+       try: which('condor_q')
+       except: KILL(log_prx+'selected HTCondor batch system, but the executable "condor_q" is not available')
    elif opts.batch_system == 'slurm':
-     try: which('squeue')
-     except: KILL(log_prx+'selected SLURM batch system, but the executable "squeue" is not available')
+       try: which('squeue')
+       except: KILL(log_prx+'selected SLURM batch system, but the executable "squeue" is not available')
    else:
-     try:
-       which('condor_q')
-       opts.batch_system = 'htc'
-     except:
        try:
-         which('squeue')
-         opts.batch_system = 'slurm'
+           which('condor_q')
+           opts.batch_system = 'htc'
        except:
-         KILL(log_prx+'automatic selection of batch system failed (HTCondor and SLURM are both unavailable)')
+           try:
+               which('squeue')
+               opts.batch_system = 'slurm'
+           except:
+               KILL(log_prx+'automatic selection of batch system failed (HTCondor and SLURM are both unavailable)')
 
    if opts.submit and (not opts.dry_run):
-     if opts.batch_system == 'htc': which('condor_submit')
-     elif opts.batch_system == 'slurm': which('sbatch')
+       if opts.batch_system == 'htc':
+           which('condor_submit')
+       elif opts.batch_system == 'slurm':
+           which('sbatch')
 
    ### unrecognized command-line arguments
    ### -> used as additional command-line arguments to cmsRun
    cmsRun_addopts = opts_unknown[:]
 
    if opts.verbosity > 0 and len(cmsRun_addopts):
-     print('-'*50)
-     print(colored_text('additional cmsRun command-line arguments:', ['1']))
-     for _tmp in cmsRun_addopts: print(' '+str(_tmp))
-     print('-'*50)
+       print('-'*50)
+       print(colored_text('additional cmsRun command-line arguments:', ['1']))
+       for _tmp in cmsRun_addopts: print(' '+str(_tmp))
+       print('-'*50)
 
    ### extract input-files information from data set name via dasgoclient
    ### -> list of dictionaries, each containing DAS name, files, number of events per file, and parent files
    input_dset = {}
 
-   if os.path.isfile(opts.dataset):
-      input_dset = skim_das_jsondump(file_path=opts.dataset, max_files=opts.max_files, max_events=opts.max_events, verbose=(opts.verbosity > 0))
+   if opts.data:
+       if os.path.isfile(opts.dataset):
+          input_dset = json.load(open(opts.dataset))
+       else:
+          which('dasgoclient')
+          input_dset_tmp = load_dataset_data2(das_name=opts.dataset, parentFiles_levels=opts.parentFiles_level, verbose=(opts.verbosity > 0))
+          input_dset = convert_dataset_data2(dset_data=input_dset_tmp, json_file_path=opts.json_file, max_lumis=opts.max_lumis, max_events=opts.max_events)
    else:
-      which('dasgoclient')
-      input_dset = load_dataset_data(das_name=opts.dataset, max_files=opts.max_files, max_events=opts.max_events, parentFiles_levels=opts.parentFiles_level, verbose=(opts.verbosity > 0))
+       if os.path.isfile(opts.dataset):
+          input_dset = skim_das_jsondump(file_path=opts.dataset, max_files=opts.max_files, max_events=opts.max_events, verbose=(opts.verbosity > 0))
+       else:
+          which('dasgoclient')
+          input_dset = load_dataset_data(das_name=opts.dataset, max_files=opts.max_files, max_events=opts.max_events, parentFiles_levels=opts.parentFiles_level, verbose=(opts.verbosity > 0))
 
    ### total number of events and jobs
    ### -> used to determine format of output-file name
+   input_dset_inputs = input_dset['lumis' if opts.data else 'files']
    nJobs, totEvents, breakLoop = 0, 0, False
-   for i_inpfdc in input_dset['files']:
+   for i_inpfdc in input_dset_inputs:
        i_nevents = i_inpfdc['nevents']
        totEvents += i_nevents
        if (opts.max_events > 0) and (totEvents >= opts.max_events):
@@ -197,11 +216,14 @@ if __name__ == '__main__':
        nJobs += int(math.ceil(float(i_nevents) / opts.n_events)) if (opts.n_events > 0) else 1
        if breakLoop:
           break
+   del totEvents, breakLoop
+
    if nJobs == 0:
       KILL(log_prx+'input error: expected number of batch jobs is zero (check input data set and number of events): '+opts.dataset)
+
    jobIndex_nDigits = max(1, int(math.ceil(math.log10(nJobs))))
    outputname_postfix_format = '_{:0'+str(jobIndex_nDigits)+'d}'
-   del nJobs, totEvents, breakLoop
+   del nJobs
 
    ### voms proxy
    voms_proxy_path = None
@@ -239,7 +261,7 @@ if __name__ == '__main__':
 
    if opts.customize_cfg:
      with open(out_cmsRun_cfg, 'a') as cfg_file:
-       custom_str = """
+       custom_str = """\
 ###
 ### customization added by {:} [time-stamp: {:}]
 ###
@@ -249,7 +271,22 @@ opts = vpo.VarParsing('analysis')
 opts.register('skipEvents', 0,
               vpo.VarParsing.multiplicity.singleton,
               vpo.VarParsing.varType.int,
-              'number of events to be skipped')
+              'Value of process.source.skipEvents')
+
+opts.register('nThreads', 1,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'Value of process.options.numberOfThreads')
+
+opts.register('nStreams', 0,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'Value of process.options.numberOfStreams')
+
+opts.register('lumisToProcess', '',
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.string,
+              'Bare value of process.source.lumisToProcess')
 
 opts.register('output', 'out.root',
               vpo.VarParsing.multiplicity.singleton,
@@ -263,6 +300,14 @@ process.maxEvents.input = opts.maxEvents
 
 # number of events to be skipped
 process.source.skipEvents = cms.untracked.uint32(opts.skipEvents)
+
+# number of threads (logical cores) and CMSSW streams (concurrent events)
+process.options.numberOfThreads = opts.nThreads
+process.options.numberOfStreams = opts.nStreams
+
+# use only selected luminosity sections
+if opts.lumisToProcess:
+    process.source.lumisToProcess = cms.untracked.VLuminosityBlockRange(opts.lumisToProcess)
 
 # input EDM files [primary]
 process.source.fileNames = opts.inputFiles
@@ -302,7 +347,7 @@ for outModLabel, outMod in process.outputModules_().items():
      SUBFILE_ABSPATH = OUTPUT_DIR+'/condor.sub'
 
      if os.path.exists(SUBFILE_ABSPATH):
-       KILL(log_prx+'target output file already exists (condor submission file): '+SUBFILE_ABSPATH)
+         KILL(log_prx+'target output file already exists (condor submission file): '+SUBFILE_ABSPATH)
 
      SUBFILE_LINES = [
        'BASEDIR = '+OUTPUT_DIR_FINAL,
@@ -319,12 +364,15 @@ for outModLabel, outMod in process.outputModules_().items():
        'getenv = True',
        'should_transfer_files = IF_NEEDED',
        'when_to_transfer_output = ON_EXIT',
-#       'requirements = (OpSysAndVer == "'+('CentOS7' if is_slc7_arch else 'SL6')+'")',
        'MY.WantOS = "el8"',
-       'RequestCpus = '+opts.cpus,
-       'RequestMemory = '+opts.memory,
-       '+RequestRuntime = '+TIME_STR_secs,
+       'RequestCpus = '+str(opts.cpus),
      ]
+
+     if opts.memory is not None:
+         SUBFILE_LINES += ['RequestMemory = {opts.memory}']
+
+     if opts.time is not None:
+         SUBFILE_LINES += ['+MaxRuntime = {TIME_STR_secs}']
 
      if opts.JobFlavour is not None:
        JobFlavour = opts.JobFlavour
@@ -365,7 +413,7 @@ for outModLabel, outMod in process.outputModules_().items():
        '#SBATCH --account=t3',
        '#SBATCH --partition='+opts.queue,
        '#SBATCH --job-name='+jobName,
-       '#SBATCH --cpus-per-task='+opts.cpus,
+       '#SBATCH --cpus-per-task='+str(opts.cpus),
        '#SBATCH --mem='+opts.memory,
        '#SBATCH --time='+TIME_STR_hhmmss,
        '#SBATCH --nodes=1',
@@ -421,10 +469,13 @@ for outModLabel, outMod in process.outputModules_().items():
    totEvents = 0
    breakLoop = False
 
-   for i_inpfdc in input_dset['files']:
-
+   for i_inpfdc in input_dset_inputs:
      i_inputFile = i_inpfdc['file']
+
+     # number of jobs for this input file
      i_inputFile_nevents = i_inpfdc['nevents']
+     i_njobs = int(math.ceil(float(i_inputFile_nevents) / opts.n_events)) if (opts.n_events > 0) else 1
+     i_nevt_remainder = i_inputFile_nevents%opts.n_events if (opts.n_events > 0) else 0
 
      i_secondaryInputFiles = None
      if opts.parentFiles_level == 2:
@@ -435,9 +486,8 @@ for outModLabel, outMod in process.outputModules_().items():
      if isinstance(i_secondaryInputFiles, list) and len(i_secondaryInputFiles) == 0:
        KILL(log_prx+'list of secondary input files is empty (parentFiles_level = '+str(opts.parentFiles_level)+')')
 
-     # number of jobs for this set of input files
-     i_njobs = int(math.ceil(float(i_inputFile_nevents) / opts.n_events)) if (opts.n_events > 0) else 1
-     i_nevt_remainder = i_inputFile_nevents%opts.n_events if (opts.n_events > 0) else 0
+     data_ijobIndex_nDigits = max(1, int(math.ceil(math.log10(i_njobs))))
+     data_ioutputname_postfix_format = '_part{:0'+str(data_ijobIndex_nDigits)+'d}'
 
      for i_job in range(i_njobs):
 
@@ -451,12 +501,12 @@ for outModLabel, outMod in process.outputModules_().items():
        # number of events for this job
        i_maxEvents = opts.n_events if (opts.n_events > 0) else i_inputFile_nevents
        if (i_job == (i_njobs - 1)) and (i_nevt_remainder != 0):
-         i_maxEvents = i_nevt_remainder
+           i_maxEvents = i_nevt_remainder
 
        totEvents += i_maxEvents
        if (opts.max_events > 0) and (totEvents >= opts.max_events):
-         i_maxEvents -= (totEvents - opts.max_events)
-         breakLoop = True
+           i_maxEvents -= (totEvents - opts.max_events)
+           breakLoop = True
 
        # HTCondor
        if opts.batch_system == 'htc':
@@ -471,7 +521,7 @@ for outModLabel, outMod in process.outputModules_().items():
 
          if not opts.dry_run:
            with open(EXEFILE_ABSPATH, 'w') as f_exefile:
-             f_exefile.write('#!/bin/bash\n')
+             f_exefile.write('#!/bin/bash -e\n')
 
              # export explicitly the environment variable LD_LIBRARY_PATH
              if opts.export_LD_LIBRARY_PATH:
@@ -480,18 +530,25 @@ for outModLabel, outMod in process.outputModules_().items():
 
              # cmsRun arguments (cfg-file + options)
              cmsRun_opts = os.path.relpath(out_cmsRun_cfg, i_OUTPUT_DIR)
+
+             if opts.data:
+                 cmsRun_opts += f' \\\n lumisToProcess={i_inpfdc["run"]}:{i_inpfdc["lumi"]}'
+                 cmsRun_opts_output_postfix = '' if i_njobs == 1 else data_ioutputname_postfix_format.format(i_job + 1)
+                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out_run{i_inpfdc["run"]:6d}_ls{i_inpfdc["lumi"]:04d}{cmsRun_opts_output_postfix}.root'
+             else:
+                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out'+outputname_postfix_format.format(jobCounter)+'.root'
+
+             cmsRun_opts += ' \\\n nThreads='+str(opts.cpus)
              cmsRun_opts += ' \\\n maxEvents='+str(i_maxEvents)
              cmsRun_opts += ' \\\n skipEvents='+str(opts.n_events*i_job)
              cmsRun_opts += ' \\\n inputFiles='+str(i_inputFile)
              if i_secondaryInputFiles:
-               cmsRun_opts += ' \\\n secondaryInputFiles='+str(','.join(i_secondaryInputFiles))
-             cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out'+outputname_postfix_format.format(jobCounter)+'.root'
+                 cmsRun_opts += ' \\\n secondaryInputFiles='+str(','.join(i_secondaryInputFiles))
 
              for _tmp in cmsRun_addopts:
-               cmsRun_opts += ' \\\n '+str(_tmp)
+                 cmsRun_opts += ' \\\n '+str(_tmp)
 
              i_SHELL_COMMANDS = [
-              ['set -e'],
               ['cd '+os.environ['CMSSW_BASE']+'/src'],
               ['eval `scram runtime -sh`'],
               ['cd '+i_OUTPUT_DIR],
