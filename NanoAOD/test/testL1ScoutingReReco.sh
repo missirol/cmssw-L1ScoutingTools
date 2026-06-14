@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-jobLabel=tmp_cmsDriver2
+jobLabel=tmp_testL1ScoutingReReco
 
 nanoFlavours=(
   L1ScoutReReco
@@ -9,10 +9,10 @@ nanoFlavours=(
 
 declare -A inputFiles=(
   ["L1ScoutReReco"]="/store/data/Run2026B/L1Scouting/L1SCOUT/v1/000/402/244/00001/65ecfc3f-65b1-443b-bf0a-a087d35dc453.root"
-  ["L1ScoutReRecoSelect"]="/store/data/Run2026B/L1ScoutingSelection/L1SCOUT/v1/000/402/244/00001/02fbf04e-ccaa-497b-94c1-08a0834f905d.root"
+  ["L1ScoutReRecoSelect"]="/store/data/Run2026D/L1ScoutingSelection/L1SCOUT/v1/000/403/937/00000/d5af5899-290d-44b7-b33d-e77a487e3fb2.root"
 )
 
-maxEvents=10
+maxEvents=100
 
 for nanoFlavour in "${nanoFlavours[@]}"; do
   dataTier=NANOAOD
@@ -26,6 +26,7 @@ for nanoFlavour in "${nanoFlavours[@]}"; do
     --filein "${inputFiles[${nanoFlavour}]}" \
     --python_filename "${outputFilePrefix}".py \
     --fileout "${outputFilePrefix}".root \
+    --nThreads 8 \
     -s NANO:@"${nanoFlavour}"
   edmConfigDump --prune "${outputFilePrefix}".py > "${outputFilePrefix}"_dump.py
   edmFileUtil "${outputFilePrefix}".root
