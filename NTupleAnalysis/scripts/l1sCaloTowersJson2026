@@ -179,6 +179,9 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--dqm-json', type=str, default='/eos/user/c/cmsdqm/www/CAF/certification/Collisions26/Collisions26_MLEnhancedGolden_Latest.json',
         help='Path to json file with lumisections certified as good for physics analysis')
 
+    parser.add_argument('-o', '--output-file-prefix', type=str, default='l1sCaloTowersJson2026',
+        help='Prefix for the basename of the output files')
+
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
         help='Verbose output to stdout')
 
@@ -193,6 +196,8 @@ if __name__ == '__main__':
 
     # CaloTowers are read out in the L1-Scouting system only for 2 timeslices out of 9
     caloTowersFraction = 2 / 9
+
+    outputFilePrefix = args.output_file_prefix
 
     stdout_delimiter = '-'*150
 
@@ -294,9 +299,9 @@ if __name__ == '__main__':
                     l1sReRecoDict[l1s_type][runNumber] = l1sDict[runNumber]
 
             # Total recorded luminosity in inverse femtobarns (/fb)
-            lumiRec1 = recorded_luminosity(input_dict = runDict1, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_certCaloOnly')
-            lumiRec2 = recorded_luminosity(input_dict = runDict2, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithoutReReco')
-            lumiRec3 = recorded_luminosity(input_dict = runDict3, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'caloTowersJson2026_{l1s_type}_{era}_goodWithReReco')
+            lumiRec1 = recorded_luminosity(input_dict = runDict1, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'{outputFilePrefix}_{l1s_type}_{era}_certCaloOnly')
+            lumiRec2 = recorded_luminosity(input_dict = runDict2, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'{outputFilePrefix}_{l1s_type}_{era}_goodWithoutReReco')
+            lumiRec3 = recorded_luminosity(input_dict = runDict3, verbose = args.verbose, normtag = args.normtag, json_file_prefix = f'{outputFilePrefix}_{l1s_type}_{era}_goodWithReReco')
 
             lumiRec2 *= caloTowersFraction
             lumiRec3 *= caloTowersFraction
@@ -317,7 +322,7 @@ if __name__ == '__main__':
     print(stdout_delimiter)
 
     for l1s_type in l1s_types:
-        out_json_file = f'caloTowersJson2026_{l1s_type}_goodWithReReco.json'
+        out_json_file = f'{outputFilePrefix}_{l1s_type}_goodWithReReco.json'
         json.dump(l1sReRecoDict[l1s_type], open(f'{out_json_file}', 'w'), sort_keys=True, indent=4)
         print(f'Output JSON file: {out_json_file}')
 
