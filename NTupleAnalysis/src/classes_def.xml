@@ -2,4 +2,5 @@
   <class name="AnalysisDriverBase"/>
   <class name="JetMETPerformanceAnalysisDriver"/>
   <class name="JetResponseAnalysisDriver"/>
+  <class name="L1ScoutSelDiJetAnalysisDriver"/>
 </lcgdict>
