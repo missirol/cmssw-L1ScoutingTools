@@ -1,7 +1,16 @@
 #!/bin/bash -e
 
-ODIR1=tmpout
-ODIR2=tmpout
+if [ $# -ne 2 ]; then
+  printf "%s\n" "--------------------------------------------------"
+  printf "%s\n" " >>> FATAL -- 2 input arguments required:"
+  printf "%s\n" "     (1) path to output logs, and"
+  printf "%s\n" "     (2) path to output files!"
+  printf "%s\n" "--------------------------------------------------"
+  exit 1
+fi
+
+ODIR1="${1}"
+ODIR2="${2}"
 
 JOB_LABEL=l1sReNano
 
@@ -27,11 +36,15 @@ l1sCaloTowersJson2026 -i json1819_pp2026_certCaloOnly.json \
 LUMIJSON_L1S_ZB=l1sCaloTowersJson2026_L1Scouting_goodWithReReco.json
 LUMIJSON_L1S_SE=l1sCaloTowersJson2026_L1ScoutingSelection_goodWithReReco.json
 
-#cat <<@EOF > tmp_lumi.json
-#{ "402512": [[300,300]], "403937": [[500,500]] }
-#@EOF
-#LUMIJSON_L1S_ZB=tmp_lumi.json
-#LUMIJSON_L1S_SE=tmp_lumi.json
+##!!
+##!! Temporary: use hand-made JSON file to
+##!! process only a small subset of the data
+##!!
+cat <<@EOF > tmp_lumi.json
+{ "402512": [[300,300]], "403937": [[500,505]] }
+@EOF
+LUMIJSON_L1S_ZB=tmp_lumi.json
+LUMIJSON_L1S_SE=tmp_lumi.json
 
 ###
 ### Job Submission Function
@@ -56,7 +69,8 @@ create_bjobs_areas () {
       -d "${sampleName}" \
       -p 0 \
       -o "${ODIR1}"/"${sampleKey}" \
-      --output-dir-cmsRun "${ODIR2}"/"${sampleKey}"
+      --output-dir-cmsRun "${ODIR2}"/"${sampleKey}" \
+      --output-file-prefix "${sampleKey}"
     echo "--------------------------------------------------"
   done
   unset sampleKey sampleName samplesMap

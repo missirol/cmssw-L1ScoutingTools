@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-script to create area for submission of batch jobs
+Script to create area for submission of batch jobs
 (supported batch systems: HTCondor, SLURM)
 """
 import argparse
@@ -36,6 +36,9 @@ if __name__ == '__main__':
 
    parser.add_argument('--output-dir-cmsRun', dest='output_dir_cmsRun', action='store', default=None,
                        help='path to directory for cmsRun outputs (if not specified, this will correspond to "output-dir")')
+
+   parser.add_argument('--output-file-prefix', dest='output_file_prefix', action='store', default='out',
+                       help='Prefix of the basename of the output file of every batch job')
 
    parser.add_argument('--customize-cfg', dest='customize_cfg', action='store_true', default=False,
                        help='append minimal customization to cmsRun-cfg required by the driver')
@@ -127,6 +130,8 @@ if __name__ == '__main__':
        if os.path.exists(OUTPUT_DIR_CMSRUN):
            KILL(log_prx+f'target path to directory for cmsRun outputs already exists [--output-dir-cmsRun]: {OUTPUT_DIR_CMSRUN}')
        OUTPUT_DIR_CMSRUN = os.path.abspath(OUTPUT_DIR_CMSRUN)
+
+   outputFilePrefix = opts.output_file_prefix
 
    if opts.n_events == 0:
        KILL(log_prx+'logic error: requesting zero events per job (use non-zero value for argument of option "-n")')
@@ -534,9 +539,9 @@ for outModLabel, outMod in process.outputModules_().items():
              if opts.data:
                  cmsRun_opts += f' \\\n lumisToProcess={i_inpfdc["run"]}:{i_inpfdc["lumi"]}'
                  cmsRun_opts_output_postfix = '' if i_njobs == 1 else data_ioutputname_postfix_format.format(i_job + 1)
-                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out_run{i_inpfdc["run"]:6d}_ls{i_inpfdc["lumi"]:04d}{cmsRun_opts_output_postfix}.root'
+                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/{outputFilePrefix}_run{i_inpfdc["run"]:6d}_ls{i_inpfdc["lumi"]:04d}{cmsRun_opts_output_postfix}.root'
              else:
-                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/out'+outputname_postfix_format.format(jobCounter)+'.root'
+                 cmsRun_opts += f' \\\n output={OUTPUT_DIR_CMSRUN}/{outputFilePrefix}'+outputname_postfix_format.format(jobCounter)+'.root'
 
              cmsRun_opts += ' \\\n nThreads='+str(opts.cpus)
              cmsRun_opts += ' \\\n maxEvents='+str(i_maxEvents)
@@ -583,7 +588,7 @@ for outModLabel, outMod in process.outputModules_().items():
            ]
 
          cmsRun_opts += [
-           'output=${TMPDIR}/out'+outputname_postfix_format.format(jobCounter)+'.root',
+           f'output=${TMPDIR}/{outputFilePrefix}'+outputname_postfix_format.format(jobCounter)+'.root',
          ]
 
          cmsRun_opts += cmsRun_addopts
@@ -630,7 +635,7 @@ for outModLabel, outMod in process.outputModules_().items():
        '  printf "%s\\n" "> output file copied: ${tmpf} -> ${OUTPUT_DIR}/logs"',
        'done',
        '',
-       'for tmpf in ${TMPDIR}/out_*.root ${TMPDIR}/flag.done; do',
+       'for tmpf in ${TMPDIR}/' + f'{outputFilePrefix}_*.root' + ' ${TMPDIR}/flag.done; do',
        '  xrdcp -f -N ${tmpf} root://t3dcachedb.psi.ch:1094//${OUTPUT_DIR}',
        '  printf "%s\\n" "> output file copied: ${tmpf} -> ${OUTPUT_DIR}"',
        'done',
