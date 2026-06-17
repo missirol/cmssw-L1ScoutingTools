@@ -41,7 +41,11 @@ LUMIJSON_L1S_SE=l1sCaloTowersJson2026_L1ScoutingSelection_goodWithReReco.json
 ##!! process only a small subset of the data
 ##!!
 cat <<@EOF > tmp_lumi.json
-{ "402512": [[300,300]], "403937": [[500,505]] }
+{
+  "402512": [[300, 300]],
+  "403441": [[100, 100]],
+  "403937": [[501, 550]]
+}
 @EOF
 LUMIJSON_L1S_ZB=tmp_lumi.json
 LUMIJSON_L1S_SE=tmp_lumi.json
