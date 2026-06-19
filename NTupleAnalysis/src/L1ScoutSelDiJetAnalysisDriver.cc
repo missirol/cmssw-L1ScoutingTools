@@ -230,7 +230,7 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
       H1("L1TJet_J1J2_phi")->Fill(j1j2_p4.phi(), wgt);
       H1("L1TJet_J1J2_mass")->Fill(j1j2_p4.mass(), wgt);
 
-      H1("L1TJet_J1J2_deltaY")->Fill(j1.p4.Y() - j2.p4.Y(), wgt);
+      H1("L1TJet_J1J2_deltaY")->Fill(j1.p4.Rapidity() - j2.p4.Rapidity(), wgt);
       H1("L1TJet_J1J2_deltaEta")->Fill(j1.p4.eta() - j2.p4.eta(), wgt);
       H1("L1TJet_J1J2_deltaPhi")->Fill(utils::deltaPhi(j1.p4.phi(), j2.p4.phi()), wgt);
     }
@@ -324,7 +324,7 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
       H1("L1SAK4CaloJet_J1J2_phi")->Fill(j1j2_p4.phi(), wgt);
       H1("L1SAK4CaloJet_J1J2_mass")->Fill(j1j2_p4.mass(), wgt);
 
-      H1("L1SAK4CaloJet_J1J2_deltaY")->Fill(j1.p4.Y() - j2.p4.Y(), wgt);
+      H1("L1SAK4CaloJet_J1J2_deltaY")->Fill(j1.p4.Rapidity() - j2.p4.Rapidity(), wgt);
       H1("L1SAK4CaloJet_J1J2_deltaEta")->Fill(j1.p4.eta() - j2.p4.eta(), wgt);
       H1("L1SAK4CaloJet_J1J2_deltaPhi")->Fill(utils::deltaPhi(j1.p4.phi(), j2.p4.phi()), wgt);
     }
