@@ -14,19 +14,22 @@ if __name__ == '__main__':
    ### args --------------
    parser = argparse.ArgumentParser(description=__doc__)
 
-   parser.add_argument('-i', '--inputs', dest='inputs', required=True, nargs='+', default=[],
+   parser.add_argument('-i', '--inputs', nargs='+', required=True,
                        help='path to input file(s)')
 
-   parser.add_argument('-o', '--output', dest='output', required=True, action='store', default='',
+   parser.add_argument('-o', '--output', action='store', required=True,
                        help='path to output directory')
 
-   parser.add_argument('-l', '--level', dest='level', action='store', type=int, default=0,
+   parser.add_argument('-m', '--match-regex', action='store', default='^(.*)__[0-9]+$',
+                       help='Regex expression to extract the basename of the output file from the basename of the input file without file extension')
+
+   parser.add_argument('-l', '--level', action='store', type=int, default=0,
                        help='level of directory depth in output directory')
 
-   parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
+   parser.add_argument('-v', '--verbose', action='store_true', default=False,
                        help='enable verbose mode')
 
-   parser.add_argument('-d', '--dry-run', dest='dry_run', action='store_true', default=False,
+   parser.add_argument('-d', '--dry-run', action='store_true', default=False,
                        help='enable dry-run mode')
 
    opts, opts_unknown = parser.parse_known_args()
@@ -40,10 +43,10 @@ if __name__ == '__main__':
 
    ### args validation ---
    if opts.level < 0:
-      KILL(log_prx+'negative level of directory depth in output directory (must be >=0) [-l]: '+str(opts.level))
+       KILL(log_prx+'negative level of directory depth in output directory (must be >=0) [-l]: '+str(opts.level))
 
-#  if os.path.exists(opts.output):
-#     KILL(log_prx+'target path to output directory already exists [-o]: '+opts.output)
+   if os.path.exists(opts.output):
+       KILL(log_prx+'target path to output directory already exists [-o]: '+opts.output)
 
    # inputs
    INPUT_FILES = []
@@ -57,7 +60,9 @@ if __name__ == '__main__':
    INPUT_FILES = sorted(list(set(INPUT_FILES)))
 
    if len(INPUT_FILES) == 0:
-      KILL(log_prx+'empty list of input files')
+       KILL(log_prx+'empty list of input files')
+
+   re_compile = re.compile(opts.match_regex)
 
    # outputs
    outputs_dict = {}
@@ -66,20 +71,18 @@ if __name__ == '__main__':
 
        input_basename_woExt = os.path.splitext(os.path.basename(i_input))[0]
 
-       input_basename_woExt_splits = input_basename_woExt.split('__')
+       re_match = re_compile.match(input_basename_woExt)
 
-       if len(input_basename_woExt_splits) != 2:
-          KILL(log_prx+'input file name with invalid format: '+i_input)
+       try:
+           output_name_pieces = [re_match.group(1)]
+       except:
+           KILL(log_prx + f'input file name with invalid format: {i_input}')
 
-       if not is_int(input_basename_woExt_splits[1]):
-          KILL(log_prx+'input file name with invalid format: '+i_input)
-
-       output_name_pieces = [input_basename_woExt_splits[0]]
        output_dirname = os.path.dirname(i_input)
        while opts.level >= len(output_name_pieces):
           output_name_pieces.insert(0, os.path.basename(output_dirname))
           output_dirname = os.path.dirname(output_dirname)
-       del output_dirname
+
        output_name = '/'.join(output_name_pieces)
 
        if output_name not in outputs_dict:
