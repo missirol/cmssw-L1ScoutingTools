@@ -167,7 +167,8 @@ if __name__ == '__main__':
        i_maxEvents = -1 if (opts.maxEvents < 0) else (opts.maxEvents - analyzer.eventsProcessed())
 
        if opts.verbosity > -99:
-          print(colored_text('[input]', ['1']), os.path.relpath(i_inpFile)+':'+i_inpTree)
+          inputFile_str = i_inpFile if i_inpFile.startswith('/') else os.path.relpath(i_inpFile)
+          print(colored_text('[input]', ['1']), f'{inputFile_str}:{i_inpTree}')
           print('skipEvents =', skipEvents)
           print('maxEvents =', i_maxEvents)
           print('-'*50)
