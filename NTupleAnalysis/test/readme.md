@@ -39,3 +39,9 @@ merge_batchOutputs.py -i out2/jobs/*.root -o out2/outputs -l 0
 ```
 jetMETPerformance_harvester.py -i out2/outputs/*.root -o out2/harvesting --profile-mean-stats-per-bin 10 -l 0
 ```
+
+------------
+
+./run_driver_l1sSelDiJet.sh
+batch_monitor.py -i out2_l1sSelDiJet -r
+./run_harvesting_l1sSelDiJet.sh out2_l1sSelDiJet

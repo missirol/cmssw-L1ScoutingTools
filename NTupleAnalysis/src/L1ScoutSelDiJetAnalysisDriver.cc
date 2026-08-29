@@ -261,13 +261,20 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
       auto const j_pt{a_pt[idx]};
       auto const j_eta{a_eta[idx]};
       auto const j_absEta{std::abs(j_eta)};
-      auto const j_nConst{a_nConst[idx]};
 
       if (not(j_pt > 30 and j_absEta < 2.5)) {
         continue;
       }
 
-      if (j_nConst < 3) {
+      auto const j_nConst{a_nConst[idx]};
+      if (j_nConst < 2) {
+        continue;
+      }
+
+      auto const j_energyCorr{a_energyCorr[idx]};
+      // Skip L1S CaloJets with uncorrected-pT above 300 GeV,
+      // because JECs are not valid in that phase space
+      if (j_pt > (300.f * j_energyCorr)) {
         continue;
       }
 
@@ -283,11 +290,11 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
       if (nJets30 == 1) {
         j1.p4 = P4f(j_pt, j_eta, a_phi[idx], a_mass[idx]);
-        j1.energyCorr = a_energyCorr[idx];
+        j1.energyCorr = j_energyCorr;
         j1.nConst = j_nConst;
       } else if (nJets30 == 2) {
         j2.p4 = P4f(j_pt, j_eta, a_phi[idx], a_mass[idx]);
-        j2.energyCorr = a_energyCorr[idx];
+        j2.energyCorr = j_energyCorr;
         j2.nConst = j_nConst;
       }
     }
