@@ -4,7 +4,7 @@ import array
 import math
 import random
 
-from utils import *
+from .utils import *
 
 def get_histo_from_filepath(file_path, hpath, bins=[], auto_rebin=False):
     tfile = ROOT.TFile.Open(file_path)

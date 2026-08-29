@@ -3,7 +3,7 @@ import ROOT
 import math
 import ctypes
 
-from th1 import *
+from .th1 import *
 
 def get_efficiency(hP, hT):
     hP1, hT1 = hP.Clone(), hT.Clone()
