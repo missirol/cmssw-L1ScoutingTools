@@ -481,16 +481,16 @@ def getPlotConfig(key, keyword, inputList):
     cfg.hists = []
 
     ##
-    ## keyword: XXX
+    ## keyword: run3_l1s_dijet01
     ##
-    if keyword == 'XXX':
+    if keyword == 'run3_l1s_dijet01':
        skip_key = False
        if skip_key:
           return
 
        cfg.legXY = [0.35, 0.85, 0.95, 0.95]
        cfg.legNColumns = 2
-       if key.endswith('_pt') or key.endswith('_mass'):
+       if key.endswith('_pt') or key.endswith('_mass') or '_nJets' in key:
            cfg.logY = True
 
        cfg.autoRangeX = False
@@ -502,6 +502,8 @@ def getPlotConfig(key, keyword, inputList):
            cfg.xMin, cfg.xMax = -5, 5
        elif key.endswith('_J1_eta') or key.endswith('_J2_eta'):
            cfg.xMin, cfg.xMax = -2.5, 2.5
+       elif '_nJets' in key:
+           cfg.xMax = 12
 
        if key.startswith('L1SAK4CaloJet_'):
            for idx, inp in enumerate(inputList):
@@ -569,7 +571,10 @@ if __name__ == '__main__':
                        help='list of matching-patterns to skip input histograms (input is skipped if its name matches any of the specified patterns)')
 
    parser.add_argument('-l', '--label', dest='label', action='store', default='',
-                       help='text label (displayed in top-left corner)')
+                       help='text label (displayed in the top-left corner)')
+
+   parser.add_argument('--tr-label', dest='tr_label', action='store', default='',
+                       help='Text for label in the top-right corner')
 
    parser.add_argument('-e', '--exts', dest='exts', nargs='+', default=['pdf'],
                        help='list of extension(s) for output file(s)')
@@ -642,6 +647,7 @@ if __name__ == '__main__':
    ROOT.TGaxis.SetExponentOffset(-Lef+.50*Lef, 0.03, 'y')
 
    label_sample = get_text(Lef+(1-Lef-Rig)*0.00, (1-Top)+Top*0.25, 11, .035, opts.label)
+   label_lumi = get_text(Lef+(1-Rig-Lef)*1.00, (1-Top)+Top*0.25, 31, .035, f'{opts.tr_label}')
 
    for _hkey in th1Keys:
        for _keyw in KEYWORDS:
@@ -650,14 +656,10 @@ if __name__ == '__main__':
               continue
 
            ## labels and axes titles
-           _labels = [label_sample]
+           _labels = [label_sample, label_lumi]
            if _plotConfig.objLabel:
                label_obj = get_text(Lef+(1-Rig-Lef)*0.95, Bot+(1-Top-Bot)*0.925, 31, .035, _plotConfig.objLabel)
                _labels += [label_obj]
-
-           if True:
-               label_lumi = get_text(Lef+(1-Rig-Lef)*1.00, (1-Top)+Top*0.25, 31, .035, 'X.XX pb^{-1}')
-               _labels += [label_lumi]
 
            _htitle = ';'+_plotConfig.titleX+';'+_plotConfig.titleY
 

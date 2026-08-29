@@ -25,12 +25,13 @@ for sampleName in ${!samplesMap[@]}; do
   sampleLabel=${samplesMap[${sampleName}]}
 
   l1sSelDiJet_plots.py \
-    -k XXX \
+    -k run3_l1s_dijet01 \
     -m "*Jet*" \
     -i "${inpdir}"/outputs/"${sampleName}".root:'N/A':1:1:20 \
     -o "${outdir}"/"${sampleName}" \
     -l "${sampleLabel}" \
-    -e png
+    --tr-label "5.6 pb^{-1}" \
+    -e png pdf root
 done
 
 if [ ${outtar} -gt 0 ] && [ -d "${outdir}" ]; then
