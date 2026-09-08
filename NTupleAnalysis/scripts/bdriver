@@ -11,8 +11,8 @@ import math
 import json
 import datetime
 
-from L1ScoutingTools.NanoAOD.common import *
-from L1ScoutingTools.NanoAOD.das import *
+from L1ScoutingTools.NTupleAnalysis.common import *
+from L1ScoutingTools.NTupleAnalysis.das import *
 
 ###
 ### main
@@ -81,6 +81,9 @@ if __name__ == '__main__':
 
    parser.add_argument('-q', '--queue', dest='queue', action='store', default='standard',
                        help='name of partition on the batch system (SLURM: "--partition")')
+
+   parser.add_argument('--os', dest='os', action='store', default='el9',
+                       help='argument of HTCondor parameter "MY.WantOS" (default "el9")')
 
    parser.add_argument('--JobFlavour', dest='JobFlavour', action='store', default=None,
                        help='argument of HTCondor parameter "+JobFlavour" (disabled by default)')
@@ -369,15 +372,15 @@ for outModLabel, outMod in process.outputModules_().items():
        'getenv = True',
        'should_transfer_files = IF_NEEDED',
        'when_to_transfer_output = ON_EXIT',
-       'MY.WantOS = "el8"',
-       'RequestCpus = '+str(opts.cpus),
+       f'MY.WantOS = "{opts.os}"',
+       f'RequestCpus = {opts.cpus}',
      ]
 
      if opts.memory is not None:
-         SUBFILE_LINES += ['RequestMemory = {opts.memory}']
+         SUBFILE_LINES += [f'RequestMemory = {opts.memory}']
 
      if opts.time is not None:
-         SUBFILE_LINES += ['+MaxRuntime = {TIME_STR_secs}']
+         SUBFILE_LINES += [f'+MaxRuntime = {TIME_STR_secs}']
 
      if opts.JobFlavour is not None:
        JobFlavour = opts.JobFlavour

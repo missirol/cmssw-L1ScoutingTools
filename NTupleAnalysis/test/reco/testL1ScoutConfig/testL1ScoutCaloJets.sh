@@ -1,21 +1,7 @@
 #!/bin/bash -e
 
- cmsswRelease=CMSSW_16_0_6_patch1
- cmsswBranch=missirol:devel_l1sCaloJECs_160X
-
- cmsrel "${cmsswRelease}"
- cd "${cmsswRelease}"/src
- cmsenv
- git cms-init --ssh
- git cms-merge-topic "${cmsswBranch}"
-
- git clone https://github.com/missirol/L1TriggerScouting-OnlineProcessing.git \
-  L1TriggerScouting/OnlineProcessing/data
-
- scram b
-
 JOBLABEL=tmp_l1Scout
-INPUTFILE=file:/eos/cms/tier0/store/data/Run2026C/L1Scouting/L1SCOUT/v1/000/403/166/00000/7691926b-b588-4e29-9887-fa76f0294480.root
+INPUTFILE=/store/data/Run2026D/L1Scouting/L1SCOUT/v1/000/403/937/00000/6dfcc5f7-8d37-44f3-80ea-fec41eb1e76f.root
 MAXORBITS=10
 
 ###
@@ -36,25 +22,26 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1
 from IOPool.Input.PoolSource import PoolSource
 process.source = PoolSource(fileNames = ['${INPUTFILE}'])
 
-from L1TriggerScouting.OnlineProcessing.L1ScoutingCaloJetProducer import L1ScoutingCaloJetProducer
-process.l1ScAK4CaloTowerJets = L1ScoutingCaloJetProducer(
+from L1TriggerScouting.OnlineProcessing.L1ScoutingCaloJetOrbitProducer import L1ScoutingCaloJetOrbitProducer
+process.l1ScCaloJets = L1ScoutingCaloJetOrbitProducer(
     src = 'l1ScCaloTowerUnpacker:CaloTower',
     akR = 0.4,
-    ptMin = 5,
     towerMinHwEt = 1,
     towerMaxHwEt = -1,
+    ptMin = 5,
     applyJECs = True,
     jecFile = 'L1TriggerScouting/OnlineProcessing/data/JEC_AK4CaloTowerL1S_Run3Winter25_v2.txt',
     jecPUProxyTowerMinHwEt = 1,
     jecPUProxyTowerMaxHwEt = -1,
     jecPUProxyTowerMinAbsHwEta = 0,
     jecPUProxyTowerMaxAbsHwEta = 4,
+    produceSortedCaloTowers = True,
     mantissaPrecision = 10
 )
 
 from L1TriggerScouting.OnlineProcessing.CaloJetBxSelector import CaloJetBxSelector
 process.CaloDijet30 = CaloJetBxSelector(
-    jetsTag = 'l1ScAK4CaloTowerJets:CaloJet',
+    jetsTag = 'l1ScCaloJets:CaloJet',
     minNJet = 2,
     minJetPt = [40, 30],
     maxJetAbsEta = [2.5, -1],
@@ -63,13 +50,13 @@ process.CaloDijet30 = CaloJetBxSelector(
 
 from L1TriggerScouting.OnlineProcessing.MaskOrbitBxScoutingCaloJet import MaskOrbitBxScoutingCaloJet
 process.BxSelectorCaloJet = MaskOrbitBxScoutingCaloJet(
-    dataTag = 'l1ScAK4CaloTowerJets:CaloJet',
+    dataTag = 'l1ScCaloJets:CaloJet',
     selectBxs = 'CaloDijet30:SelBx',
     productLabel = 'CaloJet',
 )
 
 process.L1ScoutingPath = cms.Path(
-    process.l1ScAK4CaloTowerJets
+    process.l1ScCaloJets
   + process.CaloDijet30
   + process.BxSelectorCaloJet
 )
@@ -80,7 +67,8 @@ process.l1sOutputModule = PoolOutputModule(
     outputCommands = [
         'keep *',
         'drop edmTriggerResults_*_*_*',
-        'keep *_l1ScAK4CaloTowerJets_*_*',
+        'drop *_l1ScCaloTowerUnpacker_*_*',
+        'keep *_l1ScCaloJets_*_*',
         'keep *_CaloDijet30_*_*',
         'keep *_BxSelectorCaloJet_*_*',
     ]
@@ -89,7 +77,7 @@ process.l1sOutputModule = PoolOutputModule(
 process.L1ScoutingOutputEndPath = cms.EndPath(process.l1sOutputModule)
 
 process.MessageLogger.cerr.threshold = 'DEBUG'
-process.MessageLogger.debugModules = ['l1ScAK4CaloTowerJets']
+process.MessageLogger.debugModules = ['l1ScCaloJets']
 @EOF
 
 edmConfigDump "${JOBLABEL}"_step1_cfg.py > "${JOBLABEL}"_step1_cfg_dump.py 
@@ -111,23 +99,30 @@ cat <<@EOF >> "${JOBLABEL}"_step2_cfg.py
 
 from PhysicsTools.NanoAOD.common_cff import Var
 
-process.l1scoutingAK4CaloJetsTable = cms.EDProducer("SimpleL1ScoutingCaloJetOrbitFlatTableProducer",
-    src = cms.InputTag("l1ScAK4CaloTowerJets:CaloJet"),
+process.l1scoutingCaloJetTable = cms.EDProducer("SimpleL1ScoutingCaloJetOrbitFlatTableProducer",
+    src = cms.InputTag("l1ScCaloJets:CaloJet"),
     name = cms.string("L1CaloJet"),
-    doc = cms.string("AK4 CaloTowerJets"),
+    doc = cms.string("AK4 Jets based on CaloTowers from Calo Layer-1"),
     singleton = cms.bool(False),
     skipNonExistingSrc = cms.bool(False),
     variables = cms.PSet(
-        pt = Var("pt()", "float", doc="pt", precision=10),
-        eta = Var("eta()", "float", doc="eta", precision=10),
-        phi = Var("phi()", "float", doc="phi", precision=10),
-        mass = Var("mass()", "float", doc="mass", precision=10),
-        energyCorr = Var("energyCorr()", "float", doc="Energy-scale correction applied to the jet", precision=10),
-        nConst = Var("nConst()", "int", doc="Number of jet constituents (CaloTowers)"),
+        pt = Var("pt()", "float", doc="jet pT", precision=10),
+        eta = Var("eta()", "float", doc="jet eta", precision=10),
+        phi = Var("phi()", "float", doc="jet phi", precision=10),
+        mass = Var("mass()", "float", doc="jet mass", precision=10),
+        energyCorr = Var("energyCorr()", "float", doc="correction factor applied to the jet-energy scale"),
+        energyFracEm = Var("energyFracEm()", "float", doc="EM fraction of the jet's total energy"),
+        nConst = Var("nConst()", "int", doc="number of jet constituents"),
+        nConstSaturatedEnergyECAL = Var("nConstSaturatedEnergyECAL()", "uint16", doc="number of jet constituents with saturated ECAL energy"),
+        nConstSaturatedEnergyHCAL = Var("nConstSaturatedEnergyHCAL()", "uint16", doc="number of jet constituents with saturated HCAL energy"),
+        nConstSaturatedEnergyECALAndHCAL = Var("nConstSaturatedEnergyECALAndHCAL()", "uint16", doc="number of jet constituents with saturated energy in both ECAL and HCAL"),
     )
 )
 
-process.l1scoutingNanoTask.add(process.l1scoutingAK4CaloJetsTable)
+process.l1scoutingCaloTowerPhysicalValueMap.src = 'l1ScCaloJets:SortedCaloTowers'
+process.l1scoutingCaloTowerTable.src = 'l1ScCaloJets:SortedCaloTowers'
+
+process.l1scoutingNanoTask.add(process.l1scoutingCaloJetTable)
 @EOF
 
 edmConfigDump "${JOBLABEL}"_step2_cfg.py > "${JOBLABEL}"_step2_cfg_dump.py

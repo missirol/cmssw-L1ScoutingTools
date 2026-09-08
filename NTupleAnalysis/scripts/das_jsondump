@@ -6,8 +6,8 @@ import argparse
 import os
 import json
 
-from L1ScoutingTools.NanoAOD.common import *
-from L1ScoutingTools.NanoAOD.das import load_dataset_data
+from L1ScoutingTools.NTupleAnalysis.common import *
+from L1ScoutingTools.NTupleAnalysis.das import load_dataset_data
 
 #### main
 if __name__ == '__main__':

@@ -8,7 +8,7 @@ import os
 import math
 import glob
 
-from L1ScoutingTools.NanoAOD.common import *
+from L1ScoutingTools.NTupleAnalysis.common import *
 
 def monitor_HTCondor(options, log=''):
   # input directories

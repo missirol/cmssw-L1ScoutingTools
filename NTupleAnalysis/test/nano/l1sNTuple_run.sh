@@ -45,7 +45,7 @@ cmsDriver.py "${JOB_LABEL}" --process "${JOB_LABEL^^}" ${COMMON_OPTS} \
   -n 1
 
 cat <<@EOF >> "${JOB_LABEL}"_cfg.py
-process.NANOAODoutput.saveTriggerResults = cms.untracked.bool(False)
+process.NANOAODoutput.outputCommands += ['drop edmTriggerResults_*_*_*']
 @EOF
 
 edmConfigDump --prune "${JOB_LABEL}"_cfg.py > "${JOB_LABEL}"_cfg_dump.py

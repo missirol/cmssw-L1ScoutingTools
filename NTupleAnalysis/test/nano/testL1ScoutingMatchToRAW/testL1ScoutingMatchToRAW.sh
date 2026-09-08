@@ -42,7 +42,7 @@ cmsDriver.py "${JOB_LABEL}" --process TEST ${COMMON_OPTS} \
   --python_filename "${JOB_LABEL}"_step2_cfg.py \
   --fileout file:"${JOB_LABEL}"_step2_out.root \
   -s NANO:@L1Scout -n "${MAX_ORBITS}" \
-  --customise PhysicsTools/NanoAOD/custom_l1scoutingrun3_cff.addHardwareValues \
+  --customise L1TriggerScouting/NanoAOD/custom_l1scoutingrun3_cff.addHardwareValues \
   --no_exec
 
 cat <<@EOF >> tmp.py
