@@ -4,7 +4,7 @@ utilities related to the CMS Data Aggregation System (DAS)
 """
 import json
 
-from L1ScoutingTools.NanoAOD.common import *
+from .common import *
 
 def load_dataset_data(das_name, max_files=-1, max_events=-1, parentFiles_levels=2, files_prefix='', verbose=False):
 

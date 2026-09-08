@@ -12,7 +12,7 @@ fi
 ODIR1="${1}"
 ODIR2="${2}"
 
-JOB_LABEL=l1sReNano
+JOB_LABEL=tmp_l1sNTuple
 
 CMSDRIVER_COMMON_OPTS="""
  --era Run3_2026 --scenario pp \
