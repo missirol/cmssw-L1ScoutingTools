@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 
 #include "L1ScoutingTools/NTupleAnalysis/interface/L1ScoutSelDiJetAnalysisDriver.h"

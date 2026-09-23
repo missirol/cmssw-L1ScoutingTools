@@ -1,21 +1,24 @@
 #!/bin/bash -e
 
-if [ $# -ne 2 ]; then
+if [ $# -eq 1 ]; then
+  ODIR1="${1}"
+  ODIR2="${1}"
+elif [ $# -eq 2 ]; then
+  ODIR1="${1}"
+  ODIR2="${2}"
+else
   printf "%s\n" "--------------------------------------------------"
-  printf "%s\n" " >>> FATAL -- 2 input arguments required:"
-  printf "%s\n" "     (1) path to output logs, and"
-  printf "%s\n" "     (2) path to output files!"
+  printf "%s\n" " >>> FATAL -- at least 1 input argument required:"
+  printf "%s\n" "     [1] path to output logs, and"
+  printf "%s\n" "     [2] path to output files (same as [1] if not specified)."
   printf "%s\n" "--------------------------------------------------"
   exit 1
 fi
 
-ODIR1="${1}"
-ODIR2="${2}"
-
 JOB_LABEL=tmp_l1sNTuple
 
 # number of events per sample
-NEVT=5000000
+NEVT=1000000
 
 # number of CPUs per HT-Condor job
 # (same as number of threads and
@@ -24,9 +27,14 @@ NTHREADS_PER_JOB=8
 
 declare -A samplesMap
 
+# QCD Pt-binned
+samplesMap["Run3Summer23PostBPix_QCD_Pt30to50"]="/QCD_PT-30to50_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixMiniAODv4-130X_mcRun3_2023_realistic_postBPix_v2-v2/GEN-SIM-RAW"
+
 # QCD Pt-Flat
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-EpsilonPU_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-FlatPU0to120_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
+
+# TTbar
 samplesMap["Run3Winter25_TTbar_13p6TeV"]="/TT_TuneCP5_13p6TeV_powheg-pythia8/Run3Winter25Digi-142X_mcRun3_2025_realistic_v7-v2/GEN-SIM-RAW"
 
 # Options for job submission (e.g. JobFlavour)

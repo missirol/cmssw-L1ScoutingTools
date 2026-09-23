@@ -35,7 +35,7 @@ for datasetLabel in "${datasetLabels[@]}"; do
     outFile2="${inpdir2}"_"${nnn}".root
 
     if [ -f "${outFile2}" ]; then
-      printf "%s\n" "ERROR - target output file already exists: ${outFile}"
+      printf "%s\n" "ERROR - target output file already exists: ${outFile2}"
       exit 1
     fi
 

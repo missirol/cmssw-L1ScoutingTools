@@ -41,6 +41,9 @@ if __name__ == '__main__':
    parser.add_argument('--AccountingGroup', dest='AccountingGroup', action='store', default=None,
                        help='argument of HTCondor parameter "+AccountingGroup" (by default, the parameter is not specified)')
 
+   parser.add_argument('--os', dest='os', action='store', default='el9',
+                       help='argument of HTCondor parameter "MY.WantOS" (default "el9")')
+
    parser.add_argument('--batch', dest='batch', action='store', choices=['htc', 'sge'], default='htc',
                        help='type of batch system for job submission [default: HTCondor]')
 
@@ -232,7 +235,7 @@ if __name__ == '__main__':
                 'when_to_transfer_output = ON_EXIT',
 
 #                'requirements = (OpSysAndVer == "'+('CentOS7' if is_slc7_arch else 'SL6')+'")',
-                'MY.WantOS = "el8"',
+                f'MY.WantOS = "{opts.os}"',
 
                 ' RequestMemory  =  2000',
                 '+RequestRuntime = '+str(opts.RequestRuntime),

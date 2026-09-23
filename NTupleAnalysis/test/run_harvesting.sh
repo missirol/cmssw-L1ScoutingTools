@@ -12,7 +12,7 @@ merge_batchOutputs.py \
 # Harvesting step on the outputs of the previous step
 # (adds profiles and efficiencies, in a somewhat ad-hoc way)
 for harvInputFile in $(ls -1 "${TARGET_DIR}"/outputs/*.root); do
-  jetMETPerformance_harvester.py \
+  jetPerformance_harvester.py \
     -i "${harvInputFile}" \
     -o "${TARGET_DIR}"/harvesting \
     --profile-mean-stats-per-bin 10

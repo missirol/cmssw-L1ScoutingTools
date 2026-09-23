@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <ostream>
 
@@ -8,8 +9,6 @@
 #include "L1ScoutingTools/NTupleAnalysis/interface/Utils.h"
 
 void JetResponseAnalysisDriver::init() {
-  jecA_.init(getOption("jecA_filePath"));
-
   auto f_to_str = [](float a) -> std::string {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(1) << std::showpos << a;
@@ -81,13 +80,8 @@ void JetResponseAnalysisDriver::init() {
   addTH2D("nPU__vs__nCTie4", 40, 0, 120, 48, 0, 240);
 
   labelMap_jetAK4_ = {
-      {"L1EmulJet", {{"GEN", "GenJetNoMu"}}},
-      //      {"L1EmulJet1", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0CorrA", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0CorrB", {{"GEN", "GenJetNoMu"}}},
-      {"L1EmulAK4CTJet0CorrC", {{"GEN", "GenJetNoMu"}}},
-      //      {"L1EmulAK4CTJet1", {{"GEN", "GenJetNoMu"}}},
+      {"L1Jet", {{"GEN", "GenJetNoMu"}}},
+      {"L1CaloJet", {{"GEN", "GenJetNoMu"}}},
   };
 
   for (auto const& selLabel : {"NoSelection"}) {
@@ -123,13 +117,13 @@ void JetResponseAnalysisDriver::analyze() {
   auto const nPU = this->value<float>("Pileup_nTrueInt");
   H1("nPU")->Fill(nPU, wgt);
 
-  auto const nCT = this->value<int>("nL1EmulCaloTower");
+  auto const nCT = this->value<int>("nL1CaloTower");
   H1("nCT")->Fill(nCT, wgt);
 
   unsigned int nCTie4{0};
-  auto const& ct_ieta = this->array<int>("L1EmulCaloTower_ieta");
+  auto const& ct_hwEta = this->array<int16_t>("L1CaloTower_hwEta");
   for (auto idx = 0; idx < nCT; ++idx) {
-    if (std::abs(ct_ieta[idx]) <= 4) {
+    if (std::abs(ct_hwEta[idx]) <= 4) {
       ++nCTie4;
     }
   }
@@ -139,19 +133,19 @@ void JetResponseAnalysisDriver::analyze() {
   H2("nPU__vs__nCTie4")->Fill(nPU, nCTie4, wgt);
 
   // AK4 Jets
-  float const minAK4JetPt{1};
-  float const minAK4JetPtRef{10};
-  float const maxAK4JetDeltaRmatchRef{0.2};
+  auto const minAK4JetPt{1.f};
+  auto const minAK4JetPtRef{10.f};
+  auto const maxAK4JetDeltaRmatchRef{.2f};
 
   for (auto const& jetLabel : labelMap_jetAK4_) {
     fillHistoDataJets fhDataAK4Jets;
     fhDataAK4Jets.jetCollection = jetLabel.first;
     fhDataAK4Jets.jetPtMin = utils::stringStartsWith(jetLabel.first, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
-    fhDataAK4Jets.jetPtMax = (jetLabel.first == "L1EmulJet1") ? 1023.4 : -1;
+    fhDataAK4Jets.jetPtMax = (jetLabel.first == "L1Jet") ? 1023.4 : -1;
     fhDataAK4Jets.jetAbsEtaMax = 5.0;
     for (auto const& jetLabelRefs : jetLabel.second) {
       auto const jetPtMin2 = utils::stringStartsWith(jetLabelRefs.second, "GenJet") ? minAK4JetPtRef : minAK4JetPt;
-      auto const jetPtMax2 = (jetLabelRefs.second == "L1EmulJet1") ? 1023.4 : -1;
+      auto const jetPtMax2 = (jetLabelRefs.second == "L1Jet") ? 1023.4 : -1;
       fhDataAK4Jets.matches.emplace_back(fillHistoDataJets::Match(
           jetLabelRefs.first, jetLabelRefs.second, jetPtMin2, jetPtMax2, maxAK4JetDeltaRmatchRef));
     }
@@ -285,22 +279,15 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
     dirPrefix += "/";
   }
 
-  auto const jetCollRequiresJecA{utils::stringEndsWith(fhData.jetCollection, "CorrA")};
-  auto const jetCollWithPtMax{fhData.jetCollection == "L1EmulJet1"};
   auto jetCollBranchName{fhData.jetCollection};
-  if (jetCollRequiresJecA) {
-    jetCollBranchName = fhData.jetCollection.substr(0, fhData.jetCollection.size() - 5);
-  } else if (jetCollWithPtMax) {
-    jetCollBranchName = "L1EmulJet";
-  }
 
   auto const nPU = this->value<float>("Pileup_nTrueInt");
-  auto const nCT = this->value<int>("nL1EmulCaloTower");
+  auto const nCT = this->value<int>("nL1CaloTower");
 
   unsigned int nCTie4{0};
-  auto const& ct_ieta = this->array<int>("L1EmulCaloTower_ieta");
+  auto const& ct_hwEta = this->array<int16_t>("L1CaloTower_hwEta");
   for (auto idx = 0; idx < nCT; ++idx) {
-    if (std::abs(ct_ieta[idx]) <= 4) {
+    if (std::abs(ct_hwEta[idx]) <= 4) {
       ++nCTie4;
     }
   }
@@ -327,14 +314,9 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
   auto const* a_mass = this->array_ptr<float>(jetCollBranchName + "_mass");
 
   for (auto idx = 0; idx < v_pt_size; ++idx) {
-    float corr = 1;
-    if (jetCollRequiresJecA) {
-      corr = jecA_.correction(a_pt[idx], a_eta[idx]);
-    }
-
     auto const a_mass_val = a_mass ? (*a_mass)[idx] : 0.f;
-    v_E.emplace_back(corr * std::sqrt(std::pow(a_pt[idx] * std::cosh(a_eta[idx]), 2) + std::pow(a_mass_val, 2)));
-    v_pt.emplace_back(corr * a_pt[idx]);
+    v_E.emplace_back(std::sqrt(std::pow(a_pt[idx] * std::cosh(a_eta[idx]), 2) + std::pow(a_mass_val, 2)));
+    v_pt.emplace_back(a_pt[idx]);
     v_eta.emplace_back(a_eta[idx]);
     v_phi.emplace_back(a_phi[idx]);
   }
@@ -357,14 +339,7 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
     auto const matchJetPtMax(fhDataMatch.jetPtMax);
     auto const matchJetDeltaR2Min{fhDataMatch.jetDeltaRMin * fhDataMatch.jetDeltaRMin};
 
-    auto const matchJetCollRequiresJecA{utils::stringEndsWith(matchJetColl, "CorrA")};
-    auto const matchJetCollWithPtMax{matchJetColl == "L1EmulJet1"};
     auto matchJetCollBranchName{matchJetColl};
-    if (matchJetCollRequiresJecA) {
-      matchJetCollBranchName = matchJetColl.substr(0, matchJetColl.size() - 5);
-    } else if (matchJetCollWithPtMax) {
-      matchJetCollBranchName = "L1EmulJet";
-    }
 
     if (not hasTTreeReaderValue("n" + matchJetCollBranchName)) {
       continue;
@@ -388,15 +363,10 @@ void JetResponseAnalysisDriver::fillHistograms_Jets(const std::string& dir,
     auto const* a_match_mass = this->array_ptr<float>(matchJetCollBranchName + "_mass");
 
     for (auto idx = 0; idx < v_match_pt_size; ++idx) {
-      float corr{1.f};
-      if (matchJetCollRequiresJecA) {
-        corr = jecA_.correction(a_match_pt[idx], a_match_eta[idx]);
-      }
-
       auto const a_match_mass_val = a_match_mass ? (*a_match_mass)[idx] : 0.f;
       v_match_E.emplace_back(
-          corr * std::sqrt(std::pow(a_match_pt[idx] * std::cosh(a_match_eta[idx]), 2) + std::pow(a_match_mass_val, 2)));
-      v_match_pt.emplace_back(corr * a_match_pt[idx]);
+          std::sqrt(std::pow(a_match_pt[idx] * std::cosh(a_match_eta[idx]), 2) + std::pow(a_match_mass_val, 2)));
+      v_match_pt.emplace_back(a_match_pt[idx]);
       v_match_eta.emplace_back(a_match_eta[idx]);
       v_match_phi.emplace_back(a_match_phi[idx]);
     }

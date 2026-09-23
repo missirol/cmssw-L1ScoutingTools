@@ -6,19 +6,19 @@
 #include <string>
 #include <vector>
 
-#include "L1ScoutingTools/NTupleAnalysis/interface/JetMETPerformanceAnalysisDriver.h"
+#include "L1ScoutingTools/NTupleAnalysis/interface/JetPerformanceAnalysisDriver.h"
 
-class JetResponseAnalysisDriver : public JetMETPerformanceAnalysisDriver {
+class JetResponseAnalysisDriver : public JetPerformanceAnalysisDriver {
 public:
   explicit JetResponseAnalysisDriver(const std::string& outputFilePath = "",
                                      const std::string& outputFileMode = "recreate")
-      : JetMETPerformanceAnalysisDriver(outputFilePath, outputFileMode) {}
+      : JetPerformanceAnalysisDriver(outputFilePath, outputFileMode) {}
 
   explicit JetResponseAnalysisDriver(const std::string& tfile,
                                      const std::string& ttree,
                                      const std::string& outputFilePath,
                                      const std::string& outputFileMode = "recreate")
-      : JetMETPerformanceAnalysisDriver(tfile, ttree, outputFilePath, outputFileMode) {}
+      : JetPerformanceAnalysisDriver(tfile, ttree, outputFilePath, outputFileMode) {}
 
   ~JetResponseAnalysisDriver() override {}
 

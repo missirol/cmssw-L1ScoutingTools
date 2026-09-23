@@ -1,16 +1,19 @@
 #!/bin/bash -e
 
-if [ $# -ne 2 ]; then
+if [ $# -eq 1 ]; then
+  ODIR1="${1}"
+  ODIR2="${1}"
+elif [ $# -eq 2 ]; then
+  ODIR1="${1}"
+  ODIR2="${2}"
+else
   printf "%s\n" "--------------------------------------------------"
-  printf "%s\n" " >>> FATAL -- 2 input arguments required:"
-  printf "%s\n" "     (1) path to output logs, and"
-  printf "%s\n" "     (2) path to output files!"
+  printf "%s\n" " >>> FATAL -- at least 1 input argument required:"
+  printf "%s\n" "     [1] path to output logs, and"
+  printf "%s\n" "     [2] path to output files (same as [1] if not specified)."
   printf "%s\n" "--------------------------------------------------"
   exit 1
 fi
-
-ODIR1="${1}"
-ODIR2="${2}"
 
 JOB_LABEL=tmp_l1sNTuple
 
@@ -27,14 +30,16 @@ CMSDRIVER_COMMON_OPTS="""
 ###
 rm -f json1819_pp2026_certCaloOnly.json
 wget https://cernbox.cern.ch/remote.php/dav/public-files/Dxdcs0XwLwuH5z8/\
-json1819_pp2026_certCaloOnly.json
+json1819_pp2026_certCaloOnly.json \
+  -O tmp_json1819_pp2026_certCaloOnly.json
 
-l1sCaloTowersJson2026 -i json1819_pp2026_certCaloOnly.json \
+l1sCaloTowersJson2026 \
+  -i tmp_json1819_pp2026_certCaloOnly.json \
   --normtag /cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json \
-  -o l1sCaloTowersJson2026 -v
+  -o tmp_l1sCaloTowersJson2026 -v
 
-LUMIJSON_L1S_ZB=l1sCaloTowersJson2026_L1Scouting_goodWithReReco.json
-LUMIJSON_L1S_SE=l1sCaloTowersJson2026_L1ScoutingSelection_goodWithReReco.json
+LUMIJSON_L1S_ZB=tmp_l1sCaloTowersJson2026_L1Scouting_goodWithReReco.json
+LUMIJSON_L1S_SE=tmp_l1sCaloTowersJson2026_L1ScoutingSelection_goodWithReReco.json
 
 ##!!
 ##!! Temporary: use hand-made JSON file to
