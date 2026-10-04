@@ -1,0 +1,45 @@
+[
+  {
+    "step": "GENSIM",
+    "comments": [
+      "https://cms-pdmv-prod.web.cern.ch/mcm/chained_requests?prepid=EXO-chain_RunIII2024Summer24GS_flowRunIII2024Summer24DRPremixNoOutput_flowRunIII2024Summer24MiniAODv6_flowRunIII2024Summer24NanoAODv15-00078"
+    ],
+    "SCRAM_ARCH": "el8_amd64_gcc12",
+    "CMSSW_RELEASE": "CMSSW_14_0_21",
+    "cmssw_setup_commands": [
+      "mkdir -p Configuration/GenProductions/python",
+      "cp ^^FRAGMENT_FILEPATH^^ ^^FRAGMENT_FILEPATH_REL_CMSSW^^"
+    ],
+    "cmsDriver": "cmsDriver.py ^^FRAGMENT_FILEPATH_REL_CMSSW^^ --fileout file:GEN_SIM.root --nThreads ^^NUM_CPUS^^ --nStreams 0 --nConcurrentLumis 1 --geometry DB:Extended --mc --conditions 140X_mcRun3_2024_realistic_v26 --beamspot DBrealistic --customise Configuration/DataProcessing/Utils.addMonitoring --no_exec -n ^^NUM_EVENTS^^ --step GEN,SIM --datatier GEN-SIM --eventcontent RAWSIM --era Run3_2024 --customise_commands \"process.RandomNumberGeneratorService.externalLHEProducer.initialSeed = 0\\nprocess.source.numberEventsInLuminosityBlock = cms.untracked.uint32(^^NUM_EVENTS^^)\\nprocess.source.firstLuminosityBlock = cms.untracked.uint32(1)\\nprocess.source.firstEvent = cms.untracked.uint32(1)\\n\"",
+    "job_commands": [
+      "rm -f GEN_SIM.root",
+      "cmsRun ${OUTPUT_DIR}/GENSIM_configDump.py maxEvents=${NUM_EVENTS} luminosityBlock=${NUM_LUMIBLOCK} randomizeSeeds=1"
+    ]
+  },
+  {
+    "step": "DIGI",
+    "comments": [
+      "https://cms-pdmv-prod.web.cern.ch/mcm/public/restapi/requests/get_test/EXO-RunIII2024Summer24DRPremix-01915"
+    ],
+    "SCRAM_ARCH": "el8_amd64_gcc12",
+    "CMSSW_RELEASE": "CMSSW_14_0_21_patch3",
+    "cmsDriver": "cmsDriver.py step1 --filein file:GEN_SIM.root --fileout file:DIGI.root --nThreads ^^NUM_CPUS^^ --nStreams 0 --nConcurrentLumis 1 --geometry DB:Extended --mc --conditions 140X_mcRun3_2024_realistic_v26 --customise Configuration/DataProcessing/Utils.addMonitoring --no_exec -n ^^NUM_EVENTS^^ --step DIGI,DATAMIX,L1,DIGI2RAW --datatier GEN-SIM-RAW --eventcontent PREMIXRAW --era Run3_2024 --procModifiers premix_stage2 --datamix PreMix --pileup_input \"^^PILEUP_INPUT^^\"",
+    "job_commands": [
+      "rm -f DIGI.root",
+      "cmsRun ${OUTPUT_DIR}/DIGI_configDump.py maxEvents=${NUM_EVENTS} randomizeSeeds=1",
+      "rm -f GEN_SIM.root"
+    ]
+  },
+  {
+    "step": "NANO",
+    "comments": [
+      "Custom NANO flavour for L1-Scouting MC"
+    ],
+    "cmsDriver": "cmsDriver.py step2 --filein file:DIGI.root --fileout file:NANO.root --nThreads ^^NUM_CPUS^^ --nStreams 0 --nConcurrentLumis 1 --geometry DB:Extended --mc --conditions 140X_mcRun3_2024_realistic_v26 --custom_conditions L1TCaloParams_2025_v0_3_MC,L1TCaloParamsRcd --no_exec -n ^^NUM_EVENTS^^ --step RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMC --datatier NANOAOD --eventcontent NANOAOD --era Run3_2024 --process NANO --customise_commands \"process.NANOAODoutput.outputCommands += ['drop edmTriggerResults_*_*_*']\"",
+    "job_commands": [
+      "rm -f NANO.root",
+      "cmsRun ${OUTPUT_DIR}/NANO_configDump.py maxEvents=${NUM_EVENTS}",
+      "rm -f DIGI.root"
+    ]
+  }
+]

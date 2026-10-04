@@ -23,6 +23,8 @@ public:
   void analyze() override;
 
 protected:
+  bool bxFilterDijetEt30() const;
+
   using P4f = ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>>;
 
   struct Jet {

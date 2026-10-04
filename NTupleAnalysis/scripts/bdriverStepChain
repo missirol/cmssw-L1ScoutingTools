@@ -1,0 +1,644 @@
+#!/usr/bin/env python3
+"""
+script to create area for submission of HTCondor batch jobs
+"""
+import argparse
+import os
+import stat
+import sys
+import math
+import json
+import datetime
+
+from L1ScoutingTools.NTupleAnalysis.common import *
+from L1ScoutingTools.NTupleAnalysis.das import load_dataset_data, skim_das_jsondump
+
+#### main
+if __name__ == '__main__':
+   ### args
+   parser = argparse.ArgumentParser(
+    prog='./'+os.path.basename(__file__),
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=__doc__)
+
+   parser.add_argument('-o', '--output', dest='output', action='store', default=None, required=True,
+                       help='path to output directory')
+
+   parser.add_argument('--output-dir-cmsRun', dest='output_dir_cmsRun', action='store', default=None,
+                       help='path to directory for cmsRun outputs (if not specified, this will correspond to "output-dir")')
+
+   parser.add_argument('-g', '--gridpack', dest='gridpack', action='store', default=None,
+                       help='path to gridpack (archive file)')
+
+   parser.add_argument('-f', '--fragment', dest='fragment', action='store', default=None, required=True,
+                       help='path to fragment (python file)')
+
+   parser.add_argument('-p', '--pileup-input', dest='pileup_input', action='store', default=None,
+                       help='Input string for cmd-line arg "--pileup_input" of cmsDriver.py')
+
+   parser.add_argument('-w', '--wf-json', dest='wf_json', action='store', default=None, required=True,
+                       help='path to .json file containing list of EDM workflows')
+
+   parser.add_argument('-d', '--dir-for-CMSSW-areas', dest='dir_for_CMSSW_areas', action='store', default=None, required=True,
+                       help='path to directory for CMSSW areas (required for individual MC-generation steps)')
+
+   parser.add_argument('-j', '--n-jobs', dest='n_jobs', action='store', type=int, default=None, required=True,
+                       help='number of jobs')
+
+   parser.add_argument('-n', '--n-events', dest='n_events', action='store', type=int, default=None, required=True,
+                       help='number of events per job')
+
+   parser.add_argument('-l', '--first-luminosityBlock', dest='first_luminosityBlock', action='store', type=int, default=1,
+                       help='value of first luminosityBlock')
+
+   parser.add_argument('--jobdirname', dest='jobdirname', action='store', default='job',
+                       help='prefix of batch-job sub-directories (example: [JOBDIRNAME]_[counter]/)')
+
+   parser.add_argument('-b', '--batch-system', dest='batch_system', action='store', default='auto', choices=['auto', 'htc', 'slurm'],
+                       help='keyword to select batch system (default: "auto")"')
+
+   parser.add_argument('--cpus', dest='cpus', action='store', default='1',
+                       help='number of CPUs per job (HTCondor: "RequestCpus"; SLURM: "--cpus-per-task"')
+
+   parser.add_argument('--memory', dest='memory', action='store', default='1G',
+                       help='Max memory per job (HTCondor: "RequestMemory"; SLURM: "--mem")')
+
+   parser.add_argument('--time', dest='time', action='store', default='01:00:00',
+                       help='Max runtime per job (HTCondor: "+RequestRuntime"; SLURM: "--time")')
+
+   parser.add_argument('-q', '--queue', dest='queue', action='store', default='standard',
+                       help='name of partition on the batch system (SLURM: "--partition")')
+
+   parser.add_argument('--os', dest='os', action='store', default='el9',
+                       help='argument of HTCondor parameter "MY.WantOS" (default "el9")')
+
+   parser.add_argument('--JobFlavour', dest='JobFlavour', action='store', default='longlunch',
+                       help='argument of HTCondor parameter "+JobFlavour" (default: longlunch)')
+
+   parser.add_argument('--AccountingGroup', dest='AccountingGroup', action='store', default=None,
+                       help='argument of HTCondor parameter "+AccountingGroup" (by default, the parameter is not specified)')
+
+   parser.add_argument('--name', dest='job_name', action='store', default=None,
+                       help='name of batch job (HTCondor: "batch_name", SLURM: "--job-name") [default: basename of argument of "--output"]')
+
+   parser.add_argument('-s', '--submit', dest='submit', action='store_true', default=False,
+                       help='submit job(s) on the batch system')
+
+   parser.add_argument('--export-LD-LIBRARY-PATH', dest='export_LD_LIBRARY_PATH', action='store_true', default=False,
+                       help='export explicitly the environment variable "LD_LIBRARY_PATH" in the batch-job executable')
+
+   parser.add_argument('--dry-run', dest='dry_run', action='store_true', default=False,
+                       help='enable dry-run mode')
+
+   parser.add_argument('-v', '--verbosity', dest='verbosity', nargs='?', type=int, default=0, const=1,
+                       help='level of verbosity (default: 0)')
+
+   opts, opts_unknown = parser.parse_known_args()
+   ### -------------------------
+
+   log_prx = os.path.basename(__file__)+' -- '
+
+   ### opts --------------------
+   if len(opts_unknown) > 0:
+     KILL(log_prx+'unrecognized command-line arguments: '+str(opts_unknown))
+
+   if 'CMSSW_BASE' not in os.environ:
+     KILL(log_prx+'global variable CMSSW_BASE is not defined (set up CMSSW environment with "cmsenv" before submitting jobs)')
+
+   if os.path.exists(opts.output):
+     KILL(log_prx+'target path to output directory already exists [-o]: '+str(opts.output))
+
+   OUTPUT_DIR = os.path.abspath(opts.output)
+
+   OUTPUT_DIR_CMSRUN = opts.output_dir_cmsRun
+   if OUTPUT_DIR_CMSRUN is None:
+       OUTPUT_DIR_CMSRUN = OUTPUT_DIR
+   else:
+       if os.path.exists(OUTPUT_DIR_CMSRUN):
+           KILL(log_prx+f'target path to directory for cmsRun outputs already exists [--output-dir-cmsRun]: {OUTPUT_DIR_CMSRUN}')
+       OUTPUT_DIR_CMSRUN = os.path.abspath(OUTPUT_DIR_CMSRUN)
+
+   if opts.gridpack is not None and not os.path.isfile(opts.gridpack):
+     KILL(log_prx+'invalid path to gridpack (archive file) [-g]: '+str(opts.gridpack))
+
+   if not os.path.isfile(opts.fragment):
+     KILL(log_prx+'invalid path to fragment (python file) [-f]: '+str(opts.fragment))
+
+   if not os.path.isfile(opts.wf_json):
+     KILL(log_prx+'invalid path to .json file containing list of EDM workflows [-w]: '+str(opts.wf_json))
+
+   edmWFlows = json.load(open(opts.wf_json, 'r'))
+
+   if opts.n_jobs <= 0:
+     KILL(log_prx+'logic error: requesting non-positive number of jobs [-j]: '+str(opts.n_jobs))
+
+   if opts.n_events <= 0:
+     KILL(log_prx+'logic error: requesting non-positive number of events per job [-n]: '+str(opts.n_events))
+
+   if opts.first_luminosityBlock <= 0:
+     KILL(log_prx+'logic error: requesting non-positive value for first luminosityBlock (use positive value for argument of option "-l")')
+
+   if opts.batch_system == 'htc':
+     try: which('condor_q')
+     except: KILL(log_prx+'selected HTCondor batch system, but the executable "condor_q" is not available')
+   elif opts.batch_system == 'slurm':
+     try: which('squeue')
+     except: KILL(log_prx+'selected SLURM batch system, but the executable "squeue" is not available')
+   else:
+     try:
+       which('condor_q')
+       opts.batch_system = 'htc'
+     except:
+       try:
+         which('squeue')
+         opts.batch_system = 'slurm'
+       except:
+         KILL(log_prx+'automatic selection of batch system failed (HTCondor and SLURM are both unavailable)')
+
+   if opts.submit and (not opts.dry_run):
+     if opts.batch_system == 'htc': which('condor_submit')
+     elif opts.batch_system == 'slurm': which('sbatch')
+
+   ### voms proxy
+   voms_proxy_path = None
+
+   if 'X509_USER_PROXY' in os.environ:
+     voms_proxy_path = os.environ['X509_USER_PROXY']
+   else:
+     voms_proxy_path = '/tmp/x509up_u'+str(os.getuid())
+
+   if opts.batch_system == 'slurm':
+     if not (voms_proxy_path.startswith(os.environ['HOME']) or voms_proxy_path.startswith('/work/'+os.environ['USER'])):
+       KILL(log_prx+'invalid path to voms proxy (should be under ${HOME} or /work/${USER}): '+voms_proxy_path)
+
+   if not os.path.isfile(voms_proxy_path):
+     EXE('voms-proxy-init -voms cms -rfc -valid 168:00', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+   if not os.path.isfile(voms_proxy_path):
+     KILL(log_prx+'invalid path to voms proxy: '+voms_proxy_path)
+
+   OUTPUT_DIR_FINAL = OUTPUT_DIR
+   if opts.batch_system == 'slurm':
+     OUTPUT_DIR = os.path.abspath('.tmp')
+     while os.path.exists(OUTPUT_DIR):
+       OUTPUT_DIR += 'x'
+
+   MKDIRP(OUTPUT_DIR, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+   MKDIRP(OUTPUT_DIR_CMSRUN, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+   if opts.batch_system == 'htc':
+     EXE('cp '+voms_proxy_path+' '+OUTPUT_DIR+'/X509_USER_PROXY', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+   ### copy driver command
+   if not opts.dry_run:
+     with open(os.path.abspath(OUTPUT_DIR+'/cmdLog'), 'w') as file_cmdLog:
+       file_cmdLog.write('#!/bin/bash'+'\n')
+       file_cmdLog.write('cd '+os.getcwd()+'\n')
+       file_cmdLog.write((' '.join(sys.argv[:]))+'\n')
+       os.chmod(file_cmdLog.name, os.stat(file_cmdLog.name).st_mode | stat.S_IEXEC)
+
+   jobIndex_nDigits = max(1, int(math.ceil(math.log10(opts.first_luminosityBlock+opts.n_jobs))))
+   outputname_postfix_format = '_{:0'+str(jobIndex_nDigits)+'d}'
+
+   ### condor submission file
+   if opts.batch_system == 'htc':
+
+     SUBFILE_ABSPATH = OUTPUT_DIR+'/condor.sub'
+  
+     if os.path.exists(SUBFILE_ABSPATH):
+       KILL(log_prx+'target output file already exists (condor submission file): '+SUBFILE_ABSPATH)
+
+     SUBFILE_LINES = [
+       'BASEDIR = '+OUTPUT_DIR_FINAL,
+       'batch_name = '+(opts.job_name if (opts.job_name is not None) else '$Fn(BASEDIR)'),
+       'initialdir = $DIRNAME(QFILE)',
+       'executable = $(initialdir)/exe.sh',
+       'output = logs/out.$(Cluster).$(Process)',
+       'error  = logs/err.$(Cluster).$(Process)',
+       'log    = logs/log.$(Cluster).$(Process)',
+       '#arguments =',
+       '#transfer_executable = True',
+       '#transfer_input_files =',
+       'universe = vanilla',
+       'getenv = True',
+       'should_transfer_files = IF_NEEDED',
+       'when_to_transfer_output = ON_EXIT',
+       f'MY.WantOS = "{opts.os}"',
+       'RequestCpus = '+str(opts.cpus),
+#       'RequestMemory = '+str(opts.memory),
+#       '+RequestRuntime = '+str(opts.time),
+     ]
+
+     if opts.JobFlavour is not None:
+       JobFlavour = opts.JobFlavour
+       while JobFlavour.startswith("'") or JobFlavour.startswith('"'):
+         JobFlavour = JobFlavour[1:]
+       while JobFlavour.endswith("'") or JobFlavour.endswith('"'):
+         JobFlavour = JobFlavour[:-1]
+       SUBFILE_LINES += [
+         '+JobFlavour = "{:}"'.format(JobFlavour)
+       ]
+  
+     if opts.AccountingGroup is not None:
+       AccountingGroup = opts.AccountingGroup
+       while AccountingGroup.startswith("'") or AccountingGroup.startswith('"'):
+         AccountingGroup = AccountingGroup[1:]
+       while AccountingGroup.endswith("'") or AccountingGroup.endswith('"'):
+         AccountingGroup = AccountingGroup[:-1]
+       SUBFILE_LINES += [
+         '+AccountingGroup = "{:}"'.format(AccountingGroup)
+       ]
+  
+     SUBFILE_LINES += [
+       'x509userproxy = $(BASEDIR)/X509_USER_PROXY',
+       'queue QFILE matching files $(BASEDIR)/*/flag.queue',
+     ]
+
+     if not opts.dry_run:
+       with open(SUBFILE_ABSPATH, 'w') as f_subfile:
+         for _tmp in SUBFILE_LINES:
+           f_subfile.write(_tmp+'\n')
+
+   elif opts.batch_system == 'slurm':
+
+     jobName = opts.job_name if opts.job_name is not None else os.path.basename(OUTPUT_DIR_FINAL)
+
+     EXEFILE_LINES = [
+       '#!/bin/bash -e',
+       '#SBATCH --account=t3',
+       '#SBATCH --partition='+opts.queue,
+       '#SBATCH --job-name='+jobName,
+       '#SBATCH --cpus-per-task='+opts.cpus,
+       '#SBATCH --mem='+opts.memory,
+       '#SBATCH --time='+opts.time,
+       '#SBATCH --nodes=1',
+       '#SBATCH -o /work/%u/test/.slurm/%x_%A_%a.out',
+       '#SBATCH -e /work/%u/test/.slurm/%x_%A_%a.err',
+       '',
+       'echo "------------------------------------------------------------"',
+       'echo "[`date`] Job started"',
+       'echo "------------------------------------------------------------"',
+       'DATE_START=`date +%s`',
+       '',
+       'echo HOSTNAME: ${HOSTNAME}',
+       'echo HOME: ${HOME}',
+       'echo USER: ${USER}',
+       'echo X509_USER_PROXY: ${X509_USER_PROXY}',
+       'echo CMD-LINE ARGS: $@',
+       '',
+       'if [ -z ${SLURM_ARRAY_TASK_ID} ]; then',
+       '  printf "%s\\n" "Environment variable \\"SLURM_ARRAY_TASK_ID\\" is not defined. Job will be stopped." 1>&2',
+       '  exit 1',
+       'fi',
+       '',
+       '# define SLURM_JOB_NAME and SLURM_ARRAY_JOB_ID, if they are not defined already (e.g. if script is executed locally)',
+       '[ ! -z ${SLURM_JOB_NAME} ] || SLURM_JOB_NAME='+jobName,
+       '[ ! -z ${SLURM_ARRAY_JOB_ID} ] || SLURM_ARRAY_JOB_ID=local$(date +%y%m%d%H%M%S)',
+       '',
+       'echo SLURM_JOB_NAME: ${SLURM_JOB_NAME}',
+       'echo SLURM_JOB_ID: ${SLURM_JOB_ID}',
+       'echo SLURM_ARRAY_JOB_ID: ${SLURM_ARRAY_JOB_ID}',
+       'echo SLURM_ARRAY_TASK_ID: ${SLURM_ARRAY_TASK_ID}',
+       '',
+       'OUTPUT_DIR='+OUTPUT_DIR_FINAL+'/'+opts.jobdirname+'_$(printf "%0'+str(jobIndex_nDigits)+'d" ${SLURM_ARRAY_TASK_ID})',
+       'echo OUTPUT_DIR: ${OUTPUT_DIR}',
+       '',
+       '[ ! -f ${OUTPUT_DIR}/flag.done ] || exit 0',
+       '',
+       'if [ ! -f ${X509_USER_PROXY} ]; then',
+       '  printf "%s\\n" "Authentication failed, invalid path to grid-certificate proxy: ${X509_USER_PROXY}" 1>&2',
+       '  exit 1',
+       'fi',
+       '',
+       '# local /scratch dir to be used by the job',
+       'TMPDIR=/scratch/${USER}/slurm/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}',
+       'echo TMPDIR: ${TMPDIR}',
+       'mkdir -p ${TMPDIR}',
+     ]
+
+   ### steps
+   fragment_abspath = os.path.abspath(opts.fragment)
+   fragment_localCMSSWpath = 'Configuration/GenProductions/python/'+os.path.basename(opts.fragment)
+
+   gridpack_abspath = None
+   if opts.gridpack != None:
+     EXE('cp -p '+opts.gridpack+' '+OUTPUT_DIR, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+     gridpack_abspath = os.path.join(OUTPUT_DIR_FINAL, os.path.basename(opts.gridpack))
+
+   ### create output directory and configuration files
+   ### (creates corresponding CMSSW areas, if not already available)
+   baseDirForCMSSWAreas = os.path.abspath(opts.dir_for_CMSSW_areas)
+
+   pileup_input = ''
+   if opts.pileup_input is not None:
+     if opts.pileup_input.startswith('filelist:'):
+         pileup_input = opts.pileup_input[9:]
+         if not os.path.isfile(pileup_input):
+           KILL(f'{log_prx}invalid path to pileup-input file: {pileup_input}')
+         EXE(f'cp -p {pileup_input} {OUTPUT_DIR}', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+         pileup_input = f'filelist:{os.path.join(OUTPUT_DIR_FINAL, os.path.basename(pileup_input))}'
+     else:
+         pileup_input = opts.pileup_input
+
+   for stepDict in edmWFlows:
+     scram_arch = stepDict.get('SCRAM_ARCH', os.environ['SCRAM_ARCH'])
+     step_commands = [f'export SCRAM_ARCH={scram_arch}']
+
+     if 'CMSSW_RELEASE' in stepDict:
+         cmssw_release_path = f'{baseDirForCMSSWAreas}/{stepDict["CMSSW_RELEASE"]}'
+         cmsswAreaIsNew = not os.path.isdir(f'{cmssw_release_path}/src')
+         if cmsswAreaIsNew:
+             step_commands += ['mkdir -p '+baseDirForCMSSWAreas]
+             step_commands += ['cd '+baseDirForCMSSWAreas]
+             step_commands += ['scram project CMSSW '+stepDict['CMSSW_RELEASE']]
+     else:
+         cmssw_release_path = os.environ["CMSSW_BASE"]
+
+     step_commands += [f'cd {cmssw_release_path}/src']
+     step_commands += ['eval `scram runtime -sh`']
+
+     if 'cmssw_setup_commands' in stepDict:
+       for _tmpSetupCmdIdx, _tmpSetupCmd in enumerate(stepDict['cmssw_setup_commands']):
+         stepDict['cmssw_setup_commands'][_tmpSetupCmdIdx] = _tmpSetupCmd\
+           .replace('^^FRAGMENT_FILEPATH_REL_CMSSW^^', fragment_localCMSSWpath)\
+           .replace('^^FRAGMENT_FILEPATH^^', fragment_abspath)
+
+         if gridpack_abspath is not None:
+           stepDict['cmssw_setup_commands'][_tmpSetupCmdIdx] = \
+           stepDict['cmssw_setup_commands'][_tmpSetupCmdIdx].replace('^^GRIDPACK_FILEPATH^^', gridpack_abspath)
+
+         step_commands += [stepDict['cmssw_setup_commands'][_tmpSetupCmdIdx]]
+
+     stepDict['cmsDriver'] = stepDict['cmsDriver']\
+       .replace('^^PILEUP_INPUT^^', pileup_input)\
+       .replace('^^FRAGMENT_FILEPATH_REL_CMSSW^^', fragment_localCMSSWpath)\
+       .replace('^^NUM_CPUS^^', '{:}'.format(opts.cpus))\
+       .replace('^^NUM_EVENTS^^', '{:}'.format(opts.n_events))
+
+     step_commands += ['scram b -j 4']
+     step_commands += [stepDict['cmsDriver']+' --python_filename '+OUTPUT_DIR+'/'+stepDict['step']+'_cfg.py']
+
+     step_commands += ['edmConfigDump '+OUTPUT_DIR+'/'+stepDict['step']+'_cfg.py > '+OUTPUT_DIR+'/'+stepDict['step']+'_configDump.py']
+     step_commands += ['rm -f '+OUTPUT_DIR+'/'+stepDict['step']+'_cfg.pyc']
+
+     if not opts.dry_run:
+       with open(OUTPUT_DIR+'/'+stepDict['step']+'_setup.sh', 'w') as file_setup:
+         file_setup.write('#!/bin/bash'+'\n\n')
+         for _tmpStepCmd in step_commands:
+           file_setup.write(_tmpStepCmd+'\n')
+
+     EXE(' && '.join(step_commands), verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+     ## add varParsing to configuration dump
+     with open(OUTPUT_DIR+'/'+stepDict['step']+'_configDump.py', 'a') as configDump_file:
+       custom_str = """
+###
+### customization added by {:} [time-stamp: {:}]
+###
+
+import FWCore.ParameterSet.VarParsing as vpo
+opts = vpo.VarParsing('analysis')
+
+opts.register('skipEvents', 0,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'number of events to be skipped')
+
+opts.register('luminosityBlock', None,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'number assigned to luminosityBlock')
+
+opts.register('lheSeed', None,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'Initial seed for RandomNumberGeneratorService.externalLHEProducer')
+
+opts.register('randomizeSeeds', 0,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'Randomize seeds for random-number generation')
+
+opts.parseArguments()
+
+# max number of events to be processed
+process.maxEvents.input = opts.maxEvents
+
+if hasattr(process, 'externalLHEProducer') and (opts.maxEvents > 0):
+  process.externalLHEProducer.nEvents = opts.maxEvents
+
+# number of events to be skipped
+if process.source.type_() == 'PoolSource':
+  process.source.skipEvents = cms.untracked.uint32(opts.skipEvents)
+
+# input EDM files [primary]
+if opts.inputFiles:
+  process.source.fileNames = cms.untracked.vstring(opts.inputFiles)
+
+# input EDM files [secondary]
+if opts.secondaryInputFiles:
+  process.source.secondaryFileNames = cms.untracked.vstring(opts.secondaryInputFiles)
+
+# set value of luminosityBlock
+if opts.luminosityBlock is not None:
+  if opts.luminosityBlock <= 0:
+    raise RuntimeError('invalid value for luminosityBlock (must be positive): '+str(opts.luminosityBlock))
+
+  process.source.numberEventsInLuminosityBlock = opts.maxEvents
+  process.source.firstLuminosityBlock = opts.luminosityBlock
+  process.source.firstEvent = 1 + (opts.luminosityBlock - 1) * opts.maxEvents                                                      
+
+# randomize seeds for random-number generation
+if opts.randomizeSeeds != 0:
+  # https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuidePythonTips#Reset_the_random_seeds_every_tim
+  from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
+  randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
+  randSvc.populate()
+"""
+       configDump_file.write(custom_str.format(os.path.basename(__file__), str(datetime.datetime.now())))
+
+   ### copy steps' information to .json file
+   if not opts.dry_run:
+     json.dump(edmWFlows, open(OUTPUT_DIR+'/workflows.json', 'w'), sort_keys=True, indent=2)
+
+   ### create output batch script(s)
+   for job_idx in range(opts.first_luminosityBlock, opts.first_luminosityBlock+opts.n_jobs):
+
+     # name of output sub-directory
+     i_OUTPUT_DIR = OUTPUT_DIR+'/'+opts.jobdirname+outputname_postfix_format.format(job_idx)
+     i_OUTPUT_DIR_FINAL = OUTPUT_DIR_FINAL+'/'+opts.jobdirname+outputname_postfix_format.format(job_idx)
+     i_OUTPUT_DIR_CMSRUN = OUTPUT_DIR_CMSRUN+'/'+opts.jobdirname+outputname_postfix_format.format(job_idx)
+
+     # create logs/ directory for HTCondor log-files
+     MKDIRP(i_OUTPUT_DIR+'/logs', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+     MKDIRP(i_OUTPUT_DIR_CMSRUN, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+     # number of events for this job
+     i_maxEvents = opts.n_events
+
+     # HTCondor
+     if opts.batch_system == 'htc':
+
+       # create (empty) queue-file to trigger HTCondor job submission
+       EXE('touch '+i_OUTPUT_DIR+'/flag.queue', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+       # HTCondor uses one executable per job
+       EXEFILE_ABSPATH = i_OUTPUT_DIR+'/exe.sh'
+
+       if os.path.exists(EXEFILE_ABSPATH):
+         KILL(log_prx+'target output file already exists (executable of batch job): '+EXEFILE_ABSPATH)
+
+       if not opts.dry_run:
+         with open(EXEFILE_ABSPATH, 'w') as f_exefile:
+           f_exefile.write('#!/bin/bash -e\n')
+
+           # export explicitly the environment variable LD_LIBRARY_PATH
+           if opts.export_LD_LIBRARY_PATH:
+             if 'LD_LIBRARY_PATH' in os.environ:
+               f_exefile.write('\n'+'export LD_LIBRARY_PATH='+os.environ['LD_LIBRARY_PATH']+'\n')
+
+           i_SHELL_COMMANDS = [
+             ['OUTPUT_DIR='+OUTPUT_DIR_FINAL],
+             ['JOBOUTPUT_DIR='+i_OUTPUT_DIR_FINAL],
+             ['JOBOUTPUT_DIR_CMSRUN='+i_OUTPUT_DIR_CMSRUN],
+             ['NUM_LUMIBLOCK='+str(job_idx)],
+             ['NUM_EVENTS='+str(opts.n_events)],
+             ['[ ! -f ${JOBOUTPUT_DIR}/flag.done ] || exit 0'],
+             ['source /cvmfs/cms.cern.ch/cmsset_default.sh'],
+           ]
+
+           for stepDict in edmWFlows:
+             stepCmds = ['### step: '+stepDict['step']]
+             if 'comments' in stepDict:
+               for tmpStepComm in stepDict['comments']:
+                 stepCmds += ['### '+tmpStepComm]
+
+             scram_arch = stepDict.get('SCRAM_ARCH', os.environ['SCRAM_ARCH'])
+             stepCmds += [f'export SCRAM_ARCH={scram_arch}']
+
+             cmssw_release_path = f'{baseDirForCMSSWAreas}/{stepDict["CMSSW_RELEASE"]}' if 'CMSSW_RELEASE' in stepDict else os.environ['CMSSW_BASE']
+             stepCmds += [f'cd {cmssw_release_path}/src']
+
+             stepCmds += ['eval `scram runtime -sh`']
+             stepCmds += ['cd ${JOBOUTPUT_DIR_CMSRUN}']
+
+             for _tmpJobCmd in stepDict['job_commands']:
+               stepCmds += [_tmpJobCmd]
+
+             i_SHELL_COMMANDS += [stepCmds]
+
+           i_SHELL_COMMANDS += [[
+             '### completion flag',
+             'touch ${JOBOUTPUT_DIR}/flag.done',
+           ]]
+
+           for _tmp1 in i_SHELL_COMMANDS:
+             f_exefile.write('\n')
+             for _tmp2 in _tmp1:
+               f_exefile.write(_tmp2+'\n')
+           del _tmp1, _tmp2
+
+       os.chmod(EXEFILE_ABSPATH, os.stat(EXEFILE_ABSPATH).st_mode | stat.S_IEXEC)
+
+       print(colored_text('output:', ['1', '94']), os.path.relpath(EXEFILE_ABSPATH, os.environ['PWD']))
+
+   # SLURM workflow only uses one executable
+   if opts.batch_system == 'slurm':
+
+     EXEFILE_ABSPATH = OUTPUT_DIR+'/slurm_exe.sh'
+
+     if os.path.exists(EXEFILE_ABSPATH):
+       KILL(log_prx+'target output file already exists (SLURM job executable file): '+EXEFILE_ABSPATH)
+
+     EXEFILE_LINES += [
+       'NUM_LUMIBLOCK=${SLURM_ARRAY_TASK_ID}',
+       'NUM_EVENTS='+str(opts.n_events),
+       'cd ${TMPDIR}',
+       '',
+       'source /cvmfs/cms.cern.ch/cmsset_default.sh',
+     ]
+
+     for stepDict in edmWFlows:
+       EXEFILE_LINES += ['']
+       EXEFILE_LINES += ['### step: '+stepDict['step']]
+       if 'comments' in stepDict:
+         for tmpStepComm in stepDict['comments']:
+           EXEFILE_LINES += ['### '+tmpStepComm]
+
+       scram_arch = stepDict.get('SCRAM_ARCH', os.environ['SCRAM_ARCH'])
+       EXEFILE_LINES += [f'export SCRAM_ARCH={scram_arch}']
+
+       cmssw_release_path = f'{baseDirForCMSSWAreas}/{stepDict["CMSSW_RELEASE"]}' if 'CMSSW_RELEASE' in stepDict else os.environ['CMSSW_BASE']
+       EXEFILE_LINES += [f'cd {cmssw_release_path}/src']
+
+       EXEFILE_LINES += ['eval `scram runtime -sh`']
+       EXEFILE_LINES += ['cd ${TMPDIR}']
+       for _tmpJobCmd in stepDict['job_commands']:
+         EXEFILE_LINES += [_tmpJobCmd]
+
+     EXEFILE_LINES += [
+       '',
+       'touch ${TMPDIR}/flag.done',
+       '',
+       'if [ ! -d ${OUTPUT_DIR}/logs ]; then',
+       '  if [[ ${OUTPUT_DIR} == /pnfs/* ]]; then',
+       '  (',
+       '    (! command -v scram &> /dev/null) || eval `scram unsetenv -sh`',
+       '    gfal-mkdir -p root://t3dcachedb.psi.ch:1094/${OUTPUT_DIR}/logs',
+       '    sleep 5',
+       '  )',
+       '  else',
+       '    mkdir -p ${OUTPUT_DIR}/logs',
+       '  fi',
+       'fi',
+       '',
+       'for tmpf in /work/${USER}/test/.slurm/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.{out,err}; do',
+       '  [ -f ${tmpf} ] || continue # stdout/err outputs not produced if running locally',
+       '  if [[ ${OUTPUT_DIR} == /pnfs/* ]]; then',
+       '    xrdcp -f -N ${tmpf} root://t3dcachedb.psi.ch:1094//${OUTPUT_DIR}/logs',
+       '  else',
+       '    cp ${tmpf} ${OUTPUT_DIR}/logs',
+       '  fi',
+       '  printf "%s\\n" "> output file copied: ${tmpf} -> ${OUTPUT_DIR}/logs"',
+       'done',
+       '',
+       'for tmpf in ${TMPDIR}/*.root ${TMPDIR}/flag.done; do',
+       '  if [[ ${OUTPUT_DIR} == /pnfs/* ]]; then',
+       '    xrdcp -f -N ${tmpf} root://t3dcachedb.psi.ch:1094//${OUTPUT_DIR}',
+       '  else',
+       '    cp ${tmpf} ${OUTPUT_DIR}',
+       '  fi',
+       '  printf "%s\\n" "> output file copied: ${tmpf} -> ${OUTPUT_DIR}"',
+       'done',
+       '',
+       '# removal of temporary working dir when job is completed',
+       'rm -rf ${TMPDIR}',
+       '',
+       'echo "------------------------------------------------------------"',
+       'echo "[`date`] Job completed successfully"',
+       'DATE_END=`date +%s`',
+       'runtime=$((DATE_END-DATE_START))',
+       'echo "[`date`] Elapsed time: ${runtime} sec"',
+       'echo "------------------------------------------------------------"',
+     ]
+
+     if not opts.dry_run:
+       with open(EXEFILE_ABSPATH, 'w') as f_exefile:
+         for _tmp in EXEFILE_LINES: f_exefile.write(_tmp+'\n')
+       os.chmod(EXEFILE_ABSPATH, os.stat(EXEFILE_ABSPATH).st_mode | stat.S_IEXEC)
+
+     # create local directory for SLURM log files
+     MKDIRP('/work/'+os.environ['USER']+'/test/.slurm', verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+
+     MKDIRP(os.path.dirname(OUTPUT_DIR_FINAL), verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+     EXE('mv '+OUTPUT_DIR+' '+OUTPUT_DIR_FINAL, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+     EXEFILE_ABSPATH = OUTPUT_DIR_FINAL+'/'+os.path.basename(EXEFILE_ABSPATH)
+     if not opts.dry_run:
+       print(colored_text('output:', ['1', '94']), EXEFILE_ABSPATH)
+
+   if opts.submit:
+     if opts.batch_system == 'htc':
+       EXE('condor_submit '+SUBFILE_ABSPATH, suspend=False, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
+     elif opts.batch_system == 'slurm':
+       EXE('squeue ---array='+str(opts.first_luminosityBlock)+'-'+str(first_luminosityBlock+opts.n_jobs-1)+' '+EXEFILE_ABSPATH,
+         suspend=False, verbose=(opts.verbosity > 0), dry_run=opts.dry_run)
