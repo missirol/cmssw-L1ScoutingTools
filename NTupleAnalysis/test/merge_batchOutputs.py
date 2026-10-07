@@ -20,8 +20,8 @@ if __name__ == '__main__':
    parser.add_argument('-o', '--output', action='store', required=True,
                        help='path to output directory')
 
-   parser.add_argument('-m', '--match-regex', action='store', default='^(.*)__[0-9]+$',
-                       help='Regex expression to extract the basename of the output file from the basename of the input file without file extension')
+   parser.add_argument('-m', '--match-regexes', nargs='+', default=['^(.*)__[0-9]+$'],
+                       help='Ordered list of regex expressions to extract the basename of the output file from the basename of the input file without file extension')
 
    parser.add_argument('-l', '--level', action='store', type=int, default=0,
                        help='level of directory depth in output directory')
@@ -62,7 +62,7 @@ if __name__ == '__main__':
    if len(INPUT_FILES) == 0:
        KILL(log_prx+'empty list of input files')
 
-   re_compile = re.compile(opts.match_regex)
+   re_compiles = [re.compile(match_regex) for match_regex in opts.match_regexes]
 
    # outputs
    outputs_dict = {}
@@ -71,11 +71,16 @@ if __name__ == '__main__':
 
        input_basename_woExt = os.path.splitext(os.path.basename(i_input))[0]
 
-       re_match = re_compile.match(input_basename_woExt)
+       output_name_pieces = None
+       for re_compile in re_compiles:
+           try:
+               re_match = re_compile.match(input_basename_woExt)
+               output_name_pieces = [re_match.group(1)]
+               break
+           except:
+               pass
 
-       try:
-           output_name_pieces = [re_match.group(1)]
-       except:
+       if output_name_pieces == None:
            KILL(log_prx + f'input file name with invalid format: {i_input}')
 
        output_dirname = os.path.dirname(i_input)

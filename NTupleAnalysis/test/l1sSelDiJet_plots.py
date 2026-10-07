@@ -142,8 +142,8 @@ def plot(histograms, outputs, title, labels, legXY=[], legNColumns=1, ratio=Fals
               HMAX = max(HMAX, _tmp_xyMinMax[3]) if _tmp_xyMinMax[3] is not None else 1
 
     YMIN, YMAX = yMin, yMax
-    if YMIN is None: YMIN = .0003 if logY else .0001
-    if YMAX is None: YMAX = .0003*((HMAX/.0003)**(1./.65)) if logY else .0001+((HMAX-.0001) *(1./.65))
+    if YMIN is None: YMIN = .00003 if logY else .0001
+    if YMAX is None: YMAX = .00003*((HMAX/.00003)**(1./.65)) if logY else .0001+((HMAX-.0001) *(1./.65))
 
     canvas.cd()
 
@@ -375,27 +375,44 @@ def plot(histograms, outputs, title, labels, legXY=[], legNColumns=1, ratio=Fals
 
 def getPlotLabels(key, isProfile, isEfficiency, keyword):
     _objLabel = ''
+    if 'Mjj100' in key:
+        _objLabel += 'M_{jj} > 100 GeV'
+
+    if 'dY1p1' in key:
+       _objLabel += ', |#Deltay_{jj}| < 1.1'
+
+    if 'dPhi1p0' in key:
+       _objLabel += ', |#Delta#phi_{jj}| > 1.0'
 
     ## axes' titles
     _titleX, _titleY = key, 'Entries'
 
-    if key.endswith('_nJets30'): _titleX = 'Number of jets (p_{T} > 30 GeV)'
-    elif key.endswith('_nJets40'): _titleX = 'Number of jets (p_{T} > 40 GeV)'
-    elif key.endswith('_nJets50'): _titleX = 'Number of jets (p_{T} > 50 GeV)'
+    if key.endswith('_nJets30'):
+        _titleX = 'Number of jets (p_{T} > 30 GeV)'
+    elif key.endswith('_nJets40'):
+        _titleX = 'Number of jets (p_{T} > 40 GeV)'
+    elif key.endswith('_nJets50'):
+        _titleX = 'Number of jets (p_{T} > 50 GeV)'
     else:
-        if '_J1J2_' in key: _titleX = 'Dijet'
-        elif '_J1_' in key: _titleX = 'Jet-1'
-        elif '_J2_' in key: _titleX = 'Jet-2'
+        _titleX = 'Combo' if '_Cmb_' in key else ''
+
+        if '_J1J2_' in key: _titleX += 'Dijet'
+        elif '_J1_' in key: _titleX += 'Jet-1'
+        elif '_J2_' in key: _titleX += 'Jet-2'
 
         if key.endswith('_pt'): _titleX += ' p_{T} [GeV]'
         elif key.endswith('_eta'): _titleX += ' #eta'
         elif key.endswith('_phi'): _titleX += ' #phi [rad]'
         elif key.endswith('_mass'): _titleX += ' mass [GeV]'
+        elif key.endswith('_energyFracEm'): _titleX += ' EM Energy Fraction'
         elif key.endswith('_energyCorr'): _titleX += ' JEC factor'
-        elif key.endswith('_nConst'): _titleX += ' n-constituents'
-        elif key.endswith('_deltaY'): _titleX += ' #Deltay'
+        elif key.endswith('_nConst'): _titleX += ' n-jets' if '_Cmb_' in key else ' n-constituents'
+        elif key.endswith('_deltaRap'): _titleX += ' #Deltay'
+        elif key.endswith('_deltaRapAbs'): _titleX += ' |#Deltay|'
         elif key.endswith('_deltaEta'): _titleX += ' #Delta#eta'
+        elif key.endswith('_deltaEtaAbs'): _titleX += ' |#Delta#eta|'
         elif key.endswith('_deltaPhi'): _titleX += ' #Delta#phi [rad]'
+        elif key.endswith('_deltaPhiAbs'): _titleX += ' |#Delta#phi| [rad]'
 
     return _titleX, _titleY, _objLabel
 
@@ -408,8 +425,7 @@ class PlotConfig:
         self.titleX = ''
         self.titleY = ''
         self.objLabel = ''
-#        self.divideByBinWidth = False
-#        self.normalizedToUnity = False
+        self.normalizedToUnity = False
         self.legXY = [0.75, 0.60, 0.95, 0.90]
         self.xMin = None
         self.xMax = None
@@ -484,9 +500,6 @@ def getPlotConfig(key, keyword, inputList):
     ## keyword: run3_l1s_dijet01
     ##
     if keyword == 'run3_l1s_dijet01':
-       skip_key = False
-       if skip_key:
-          return
 
        cfg.legXY = [0.35, 0.85, 0.95, 0.95]
        cfg.legNColumns = 2
@@ -498,17 +511,48 @@ def getPlotConfig(key, keyword, inputList):
            cfg.xMax = 500
        elif key.endswith('_J1J2_pt'):
            cfg.xMax = 1200
-       elif key.endswith('_J1J2_deltaY') or key.endswith('_J1J2_deltaEta'):
+       elif key.endswith('_J1J2_deltaRap') or key.endswith('_J1J2_deltaEta'):
            cfg.xMin, cfg.xMax = -5, 5
+       elif key.endswith('_J1J2_deltaRapAbs') or key.endswith('_J1J2_deltaEtaAbs'):
+           cfg.xMin, cfg.xMax = 0, 5
        elif key.endswith('_J1_eta') or key.endswith('_J2_eta'):
            cfg.xMin, cfg.xMax = -2.5, 2.5
        elif '_nJets' in key:
            cfg.xMax = 12
 
-       if key.startswith('L1SAK4CaloJet_'):
+       if key.startswith('L1SCaloJet_'):
            for idx, inp in enumerate(inputList):
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1SAK4CaloJet_', 'L1TJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
-               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1SAK4CaloJet_', 'L1SAK4CaloJet_'), Legend='L1S AK4 CaloJets', Color=ROOT.kBlue) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1SCaloJet_', 'L1TJet_'), Legend='L1T Jets', Color=ROOT.kRed) if idx==0 else None]
+               cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key.replace('L1SCaloJet_', 'L1SCaloJet_'), Legend='L1S CaloJets', Color=ROOT.kBlue) if idx==0 else None]
+
+    ##
+    ## keyword: run3_l1s_dijet02
+    ##
+    elif keyword == 'run3_l1s_dijet02':
+
+       cfg.legXY = [0.15, 0.80, 0.85, 0.88]
+       cfg.legNColumns = 5
+       if key.endswith('_pt') or key.endswith('_mass') or '_nJets' in key:
+           cfg.logY = True
+
+       cfg.autoRangeX = False
+       if key.endswith('_J1_pt') or key.endswith('_J2_pt'):
+           cfg.xMax = 500
+       elif key.endswith('_J1J2_pt'):
+           cfg.xMax = 1200
+       elif key.endswith('_J1J2_deltaRap') or key.endswith('_J1J2_deltaEta'):
+           cfg.xMin, cfg.xMax = -5, 5
+       elif key.endswith('_J1J2_deltaRapAbs') or key.endswith('_J1J2_deltaEtaAbs'):
+           cfg.xMin, cfg.xMax = 0, 5
+       elif key.endswith('_J1_eta') or key.endswith('_J2_eta'):
+           cfg.xMin, cfg.xMax = -2.5, 2.5
+       elif '_nJets' in key:
+           cfg.xMax = 12
+
+       cfg.normalizedToUnity = True
+
+       for idx, inp in enumerate(inputList):
+           cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key)]
 
     ##
     ## Unknown keywords
@@ -537,12 +581,12 @@ def getPlotConfig(key, keyword, inputList):
               elif (abs(_tmpBW-cfg_h.th1.GetBinWidth(_tmp))/max(abs(_tmpBW), abs(cfg_h.th1.GetBinWidth(_tmp)))) > 1e-4:
                  divideByBinWidth = True
                  break
+
           if divideByBinWidth:
              cfg_h.th1.Scale(1., 'width')
              usedDivideByBinWidth = True
 
-          normalizedToUnity = False
-          if normalizedToUnity:
+          if cfg.normalizedToUnity:
              cfg_h.th1.Scale(1. / cfg_h.th1.Integral())
 
     if usedDivideByBinWidth:
