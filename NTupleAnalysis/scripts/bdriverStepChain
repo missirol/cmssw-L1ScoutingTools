@@ -11,7 +11,6 @@ import json
 import datetime
 
 from L1ScoutingTools.NTupleAnalysis.common import *
-from L1ScoutingTools.NTupleAnalysis.das import load_dataset_data, skim_das_jsondump
 
 #### main
 if __name__ == '__main__':

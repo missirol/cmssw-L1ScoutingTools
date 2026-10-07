@@ -5,6 +5,8 @@
 cd "${1}"
 
 for sampleName in $(ls -d *); do
-  haddnano.py "${sampleName}".root "${sampleName}"/job*/*.root
+  cd "${sampleName}"
+  haddnano.py ../"${sampleName}".root job_*/NANO.root
+  cd "${OLDPWD}"
   rm -rf "${sampleName}"
 done
