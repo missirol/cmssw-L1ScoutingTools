@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <utility>
 
 #include "L1ScoutingTools/NTupleAnalysis/interface/L1ScoutSelDiJetAnalysisDriver.h"
 #include "L1ScoutingTools/NTupleAnalysis/interface/Utils.h"
@@ -67,9 +68,9 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
   std::vector<float> const binEdges_mass(
       {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 400, 500, 600});
 
-  std::vector<float> binEdges_mass2(301);
+  std::vector<float> binEdges_mass2(551);
   for (uint idx = 0; idx < binEdges_mass2.size(); ++idx) {
-    binEdges_mass2.at(idx) = 100.f + 2.f * idx;
+    binEdges_mass2.at(idx) = 150.f + 1.f * idx;
   }
 
   std::vector<float> binEdges_deltaRap(161);
@@ -107,7 +108,7 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
   addTH1D("L1TJet_passSelBx_passDiJet30", {0, 1});
 
   std::vector<std::string> const tags1{"Std", "Cmb"};
-  std::vector<std::string> const tags2{"Mjj100", "Mjj100dY1p1dPhi1p0"};
+  std::vector<std::string> const tags2{"Mjj150", "Mjj150dY1p1dPhi1p0"};
 
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
@@ -144,9 +145,9 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
     binEdges_energyCorr.at(idx) = 0.05 * idx;
   }
 
-  std::vector<float> binEdges_energyFracEm(41);
+  std::vector<float> binEdges_energyFracEm(51);
   for (uint idx = 0; idx < binEdges_energyFracEm.size(); ++idx) {
-    binEdges_energyFracEm.at(idx) = 0.025f * idx;
+    binEdges_energyFracEm.at(idx) = 0.02f * idx;
   }
 
   std::vector<float> binEdges_nConst(61);
@@ -164,6 +165,7 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_nJets50", binEdges_njets);
 
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_pt", binEdges_pt);
+      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_ptUncorr", binEdges_pt);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_eta", binEdges_eta);
       addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_eta_phi", binEdges_eta, binEdges_phi);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_phi", binEdges_phi);
@@ -173,6 +175,7 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_nConst", binEdges_nConst);
 
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_pt", binEdges_pt);
+      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_ptUncorr", binEdges_pt);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_eta", binEdges_eta);
       addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_eta_phi", binEdges_eta, binEdges_phi);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_phi", binEdges_phi);
@@ -216,12 +219,13 @@ bool L1ScoutSelDiJetAnalysisDriver::bxFilterDijetEt30() const {
 }
 
 void L1ScoutSelDiJetAnalysisDriver::analyze() {
-  float const wgt{1.f};
+  float const wgt{this->hasTTreeReaderValue("genWeight") ? this->value<float>("genWeight") : 1.f};
+
   H1("weight")->Fill(wgt);
   H1("eventsProcessed_unwgt")->Fill(0.5);
   H1("eventsProcessed")->Fill(0.5, wgt);
 
-  bool const isRealData{not hasTTreeReaderValue("nGenJet")};
+  bool const isRealData{not this->hasTTreeReaderValue("nGenJet")};
 
   auto const selBx_DijetEt30{isRealData ? this->value<bool>("SelBx_DijetEt30") : bxFilterDijetEt30()};
   auto const selBx_l1ScBXsWithCaloTowers{isRealData ? this->value<bool>("SelBx_l1ScBXsWithCaloTowers") : true};
@@ -229,7 +233,7 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     return;
   }
 
-  float const maxJetEtaAbs{2.5f};
+  float const maxJetEtaAbs{3.0f};
 
   // L1T Jets
   {
@@ -270,23 +274,23 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     for (auto const idx : sortIdxs) {
       auto const j_pt{a_pt[idx]};
       auto const j_eta{a_eta[idx]};
-      auto const j_absEta{std::abs(j_eta)};
+      auto const j_phi{a_phi[idx]};
 
       ++nJets30;
 
-      if (j_pt > 40.f and j_absEta < maxJetEtaAbs) {
+      if (j_pt > 40.f) {
         ++nJets40;
       }
 
-      if (j_pt > 50.f and j_absEta < maxJetEtaAbs) {
+      if (j_pt > 50.f) {
         ++nJets50;
       }
 
       if (nJets30 == 1) {
-        j1.p4 = P4f(j_pt, j_eta, a_phi[idx], 0.f);
+        j1.p4 = P4f(j_pt, j_eta, j_phi, 0.f);
         j1.index = idx;
       } else if (nJets30 == 2) {
-        j2.p4 = P4f(j_pt, j_eta, a_phi[idx], 0.f);
+        j2.p4 = P4f(j_pt, j_eta, j_phi, 0.f);
         j2.index = idx;
       }
     }
@@ -296,9 +300,9 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     if (nJets30 >= 2) {
       H1("L1TJet_passSelBx_passDiJet30")->Fill(0.5, wgt);
 
-      fill_dijet_plots("L1TJet_Std_Mjj100", wgt, nJets30, nJets40, nJets50, j1, j2, false, 100.f, -1.f, -1.f);
+      fill_dijet_plots("L1TJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, -1.f);
       fill_dijet_plots(
-          "L1TJet_Std_Mjj100dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, false, 100.f, 1.1f, 1.0f);
+          "L1TJet_Std_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 1.1f, 1.0f);
 
       Jet j1_cmb{j1};
       j1_cmb.index = -1;
@@ -318,8 +322,8 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
         auto const j_eta{a_eta[idx]};
         auto const j_phi{a_phi[idx]};
 
-        auto const j1_deltaR2{utils::deltaR2(j1.p4.eta(), j_eta, j1.p4.phi(), j_phi)};
-        auto const j2_deltaR2{utils::deltaR2(j2.p4.eta(), j_eta, j2.p4.phi(), j_phi)};
+        auto const j1_deltaR2{utils::deltaR2(j1.p4.eta(), j1.p4.phi(), j_eta, j_phi)};
+        auto const j2_deltaR2{utils::deltaR2(j2.p4.eta(), j2.p4.phi(), j_eta, j_phi)};
 
         if (j1_deltaR2 < max_jetCmb_deltaR2 or j2_deltaR2 < max_jetCmb_deltaR2) {
           auto& cmbJet{j1_deltaR2 < j2_deltaR2 ? j1_cmb : j2_cmb};
@@ -329,9 +333,14 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
         }
       }
 
-      fill_dijet_plots("L1TJet_Cmb_Mjj100", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 100.f, -1.f, -1.f);
+      // After merging, the wide-jet axes can swap in pT ordering: restore J1 = leading
+      if (j2_cmb.p4.pt() > j1_cmb.p4.pt()) {
+        std::swap(j1_cmb, j2_cmb);
+      }
+
+      fill_dijet_plots("L1TJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 150.f, -1.f, -1.f);
       fill_dijet_plots(
-          "L1TJet_Cmb_Mjj100dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 100.f, 1.1f, 1.0f);
+          "L1TJet_Cmb_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 150.f, 1.1f, 1.0f);
     }
   }
 
@@ -347,7 +356,6 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     auto const& a_nConst = this->array<int>("L1CaloJet_nConst");
     auto const& a_nConstSatECAL = this->array<uint16_t>("L1CaloJet_nConstSaturatedEnergyECAL");
     auto const& a_nConstSatHCAL = this->array<uint16_t>("L1CaloJet_nConstSaturatedEnergyHCAL");
-    auto const& a_nConstSatECALAndHCAL = this->array<uint16_t>("L1CaloJet_nConstSaturatedEnergyECALAndHCAL");
 
     std::vector<int> sortIdxs{};
     sortIdxs.reserve(a_size);
@@ -376,8 +384,15 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
       // Skip L1S CaloJets containing at least 1 CaloTower
       // with saturated energy (in either ECAL or HCAL)
-      auto const nConstSatECALOrHCAL{a_nConstSatECAL[idx] + a_nConstSatHCAL[idx] - a_nConstSatECALAndHCAL[idx]};
-      if (nConstSatECALOrHCAL > 0) {
+      auto const nConstSatECAL{a_nConstSatECAL[idx]};
+      auto const nConstSatHCAL{a_nConstSatHCAL[idx]};
+      if (nConstSatECAL > 0 or nConstSatHCAL > 0) {
+        continue;
+      }
+
+      // Skip L1S CaloJets with very-low or very-high EM-energy-fraction values
+      auto const j_energyFracEm{a_energyFracEm[idx]};
+      if (not(0.02f < j_energyFracEm and j_energyFracEm < 0.98f)) {
         continue;
       }
 
@@ -396,29 +411,29 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     for (auto const idx : sortIdxs) {
       auto const j_pt{a_pt[idx]};
       auto const j_eta{a_eta[idx]};
-      auto const j_absEta{std::abs(j_eta)};
+      auto const j_phi{a_phi[idx]};
       auto const j_energyFracEm{a_energyFracEm[idx]};
       auto const j_energyCorr{a_energyCorr[idx]};
       auto const j_nConst{a_nConst[idx]};
 
       ++nJets30;
 
-      if (j_pt > 40.f and j_absEta < maxJetEtaAbs) {
+      if (j_pt > 40.f) {
         ++nJets40;
       }
 
-      if (j_pt > 50.f and j_absEta < maxJetEtaAbs) {
+      if (j_pt > 50.f) {
         ++nJets50;
       }
 
       if (nJets30 == 1) {
-        j1.p4 = P4f(j_pt, j_eta, a_phi[idx], a_mass[idx]);
+        j1.p4 = P4f(j_pt, j_eta, j_phi, a_mass[idx]);
         j1.index = idx;
         j1.energyCorr = j_energyCorr;
         j1.energyFracEm = j_energyFracEm;
         j1.nConst = j_nConst;
       } else if (nJets30 == 2) {
-        j2.p4 = P4f(j_pt, j_eta, a_phi[idx], a_mass[idx]);
+        j2.p4 = P4f(j_pt, j_eta, j_phi, a_mass[idx]);
         j2.index = idx;
         j2.energyCorr = j_energyCorr;
         j2.energyFracEm = j_energyFracEm;
@@ -431,9 +446,9 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     if (nJets30 >= 2) {
       H1("L1SCaloJet_passSelBx_passDiJet30")->Fill(0.5, wgt);
 
-      fill_dijet_plots("L1SCaloJet_Std_Mjj100", wgt, nJets30, nJets40, nJets50, j1, j2, true, 100.f, -1.f, -1.f);
+      fill_dijet_plots("L1SCaloJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, -1.f);
       fill_dijet_plots(
-          "L1SCaloJet_Std_Mjj100dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, true, 100.f, 1.1f, 1.0f);
+          "L1SCaloJet_Std_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 1.1f, 1.0f);
 
       Jet j1_cmb{j1};
       j1_cmb.index = -1;
@@ -453,8 +468,8 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
         auto const j_eta{a_eta[idx]};
         auto const j_phi{a_phi[idx]};
 
-        auto const j1_deltaR2{utils::deltaR2(j1.p4.eta(), j_eta, j1.p4.phi(), j_phi)};
-        auto const j2_deltaR2{utils::deltaR2(j2.p4.eta(), j_eta, j2.p4.phi(), j_phi)};
+        auto const j1_deltaR2{utils::deltaR2(j1.p4.eta(), j1.p4.phi(), j_eta, j_phi)};
+        auto const j2_deltaR2{utils::deltaR2(j2.p4.eta(), j2.p4.phi(), j_eta, j_phi)};
 
         if (j1_deltaR2 < max_jetCmb_deltaR2 or j2_deltaR2 < max_jetCmb_deltaR2) {
           auto& cmbJet{j1_deltaR2 < j2_deltaR2 ? j1_cmb : j2_cmb};
@@ -470,10 +485,15 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
         }
       }
 
+      // After merging, the wide-jet axes can swap in pT ordering: restore J1 = leading
+      if (j2_cmb.p4.pt() > j1_cmb.p4.pt()) {
+        std::swap(j1_cmb, j2_cmb);
+      }
+
       fill_dijet_plots(
-          "L1SCaloJet_Cmb_Mjj100", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 100.f, -1.f, -1.f);
+          "L1SCaloJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, -1.f, -1.f);
       fill_dijet_plots(
-          "L1SCaloJet_Cmb_Mjj100dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 100.f, 1.1f, 1.0f);
+          "L1SCaloJet_Cmb_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, 1.1f, 1.0f);
     }
   }
 }
@@ -519,11 +539,13 @@ void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_lab
       H1(plot_label + "_J2_phi")->Fill(j2.p4.phi(), wgt);
 
       if (fillExtraJetVars) {
+        H1(plot_label + "_J1_ptUncorr")->Fill(j1.p4.pt() / j1.energyCorr, wgt);
         H1(plot_label + "_J1_mass")->Fill(j1.p4.mass(), wgt);
         H1(plot_label + "_J1_energyCorr")->Fill(j1.energyCorr, wgt);
         H1(plot_label + "_J1_energyFracEm")->Fill(j1.energyFracEm, wgt);
         H1(plot_label + "_J1_nConst")->Fill(j1.nConst, wgt);
 
+        H1(plot_label + "_J2_ptUncorr")->Fill(j2.p4.pt() / j2.energyCorr, wgt);
         H1(plot_label + "_J2_mass")->Fill(j2.p4.mass(), wgt);
         H1(plot_label + "_J2_energyCorr")->Fill(j2.energyCorr, wgt);
         H1(plot_label + "_J2_energyFracEm")->Fill(j2.energyFracEm, wgt);
