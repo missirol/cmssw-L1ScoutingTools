@@ -373,10 +373,10 @@ def plot(histograms, outputs, title, labels, legXY=[], legNColumns=1, ratio=Fals
 
     return 0
 
-def getPlotLabels(key, isProfile, isEfficiency, keyword):
+def getPlotLabels(key, config, keyword):
     _objLabel = ''
-    if 'Mjj100' in key:
-        _objLabel += 'M_{jj} > 100 GeV'
+    if 'Mjj150' in key:
+        _objLabel += 'M_{jj} > 150 GeV'
 
     if 'dY1p1' in key:
        _objLabel += ', |#Deltay_{jj}| < 1.1'
@@ -401,6 +401,7 @@ def getPlotLabels(key, isProfile, isEfficiency, keyword):
         elif '_J2_' in key: _titleX += 'Jet-2'
 
         if key.endswith('_pt'): _titleX += ' p_{T} [GeV]'
+        elif key.endswith('_ptUncorr'): _titleX += ' p_{T} (raw) [GeV]'
         elif key.endswith('_eta'): _titleX += ' #eta'
         elif key.endswith('_phi'): _titleX += ' #phi [rad]'
         elif key.endswith('_mass'): _titleX += ' mass [GeV]'
@@ -492,8 +493,6 @@ def getPlotConfig(key, keyword, inputList):
 
     cfg.logY = ('_NotMatchedTo' in key_basename) and key_basename.endswith('pt_eff')
 
-    cfg.titleX, cfg.titleY, cfg.objLabel = getPlotLabels(key=key_basename, isProfile=cfg.IsProfile, isEfficiency=cfg.IsEfficiency, keyword=keyword)
-
     cfg.hists = []
 
     ##
@@ -503,22 +502,22 @@ def getPlotConfig(key, keyword, inputList):
 
        cfg.legXY = [0.35, 0.85, 0.95, 0.95]
        cfg.legNColumns = 2
-       if key.endswith('_pt') or key.endswith('_mass') or '_nJets' in key:
+       if key.endswith('_pt') or key.endswith('_ptUncorr') or key.endswith('_mass') or '_nJets' in key:
            cfg.logY = True
 
        cfg.autoRangeX = False
-       if key.endswith('_J1_pt') or key.endswith('_J2_pt'):
-           cfg.xMax = 500
-       elif key.endswith('_J1J2_pt'):
-           cfg.xMax = 1200
+       if key.endswith('_pt') or key.endswith('_ptUncorr'):
+           cfg.xMax = 1200 if '_J1J2_' in key else 500
        elif key.endswith('_J1J2_deltaRap') or key.endswith('_J1J2_deltaEta'):
            cfg.xMin, cfg.xMax = -5, 5
        elif key.endswith('_J1J2_deltaRapAbs') or key.endswith('_J1J2_deltaEtaAbs'):
            cfg.xMin, cfg.xMax = 0, 5
        elif key.endswith('_J1_eta') or key.endswith('_J2_eta'):
-           cfg.xMin, cfg.xMax = -2.5, 2.5
+           cfg.xMin, cfg.xMax = -3.0, 3.0
        elif '_nJets' in key:
            cfg.xMax = 12
+
+       cfg.titleX, cfg.titleY, cfg.objLabel = getPlotLabels(key=key_basename, config=cfg, keyword=keyword)
 
        if key.startswith('L1SCaloJet_'):
            for idx, inp in enumerate(inputList):
@@ -532,24 +531,24 @@ def getPlotConfig(key, keyword, inputList):
 
        cfg.legXY = [0.15, 0.80, 0.85, 0.88]
        cfg.legNColumns = 5
-       if key.endswith('_pt') or key.endswith('_mass') or '_nJets' in key:
+       if key.endswith('_pt') or key.endswith('_ptUncorr') or key.endswith('_mass') or '_nJets' in key:
            cfg.logY = True
 
        cfg.autoRangeX = False
-       if key.endswith('_J1_pt') or key.endswith('_J2_pt'):
-           cfg.xMax = 500
-       elif key.endswith('_J1J2_pt'):
-           cfg.xMax = 1200
+       if key.endswith('_pt') or key.endswith('_ptUncorr'):
+           cfg.xMax = 1200 if '_J1J2_' in key else 500
        elif key.endswith('_J1J2_deltaRap') or key.endswith('_J1J2_deltaEta'):
            cfg.xMin, cfg.xMax = -5, 5
        elif key.endswith('_J1J2_deltaRapAbs') or key.endswith('_J1J2_deltaEtaAbs'):
            cfg.xMin, cfg.xMax = 0, 5
        elif key.endswith('_J1_eta') or key.endswith('_J2_eta'):
-           cfg.xMin, cfg.xMax = -2.5, 2.5
+           cfg.xMin, cfg.xMax = -3.0, 3.0
        elif '_nJets' in key:
            cfg.xMax = 12
 
        cfg.normalizedToUnity = True
+
+       cfg.titleX, cfg.titleY, cfg.objLabel = getPlotLabels(key=key_basename, config=cfg, keyword=keyword)
 
        for idx, inp in enumerate(inputList):
            cfg.hists += [getHistogram(plotCfg=cfg, inputDict=inp, key=key)]
@@ -589,7 +588,9 @@ def getPlotConfig(key, keyword, inputList):
           if cfg.normalizedToUnity:
              cfg_h.th1.Scale(1. / cfg_h.th1.Integral())
 
-    if usedDivideByBinWidth:
+    if cfg.normalizedToUnity:
+       cfg.titleY = 'Fraction of events'
+    elif usedDivideByBinWidth:
        cfg.titleY += ' / Bin width'
 
     return cfg
@@ -659,7 +660,11 @@ if __name__ == '__main__':
    for _input in opts.inputs:
        _input_pieces = _input.split(':')
        if len(_input_pieces) >= 3:
-          print('reading..', os.path.relpath(_input_pieces[0]))
+          inpfile_relpath = os.path.relpath(_input_pieces[0])
+          if not os.path.isfile(_input_pieces[0]):
+              print(f'WARNING -- input file does not exist: {inpfile_relpath}')
+              continue
+          print('reading..', inpfile_relpath)
           _tmp = {}
           _tmp['TH1s'] = getTH1sFromTFile(_input_pieces[0], matches=MATCHES, skip=SKIP, verbose=(opts.verbosity > 20))
           th1Keys += _tmp['TH1s'].keys()
