@@ -23,6 +23,8 @@ public:
   void analyze() override;
 
 protected:
+  int selectionType_ = -1;
+
   using P4f = ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>>;
 
   struct Jet {

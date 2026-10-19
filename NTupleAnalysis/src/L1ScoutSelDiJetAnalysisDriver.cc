@@ -2,6 +2,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <numbers>
+#include <numeric>
+#include <stdexcept>
 #include <utility>
 
 #include "L1ScoutingTools/NTupleAnalysis/interface/L1ScoutSelDiJetAnalysisDriver.h"
@@ -20,6 +22,12 @@ L1ScoutSelDiJetAnalysisDriver::L1ScoutSelDiJetAnalysisDriver(const std::string& 
     : AnalysisDriverBase(outputFilePath, outputFileMode) {}
 
 void L1ScoutSelDiJetAnalysisDriver::init() {
+  selectionType_ = std::atoi(getOption("selectionType").c_str());
+
+  if (selectionType_ != 0 and selectionType_ != 1) {
+    throw std::runtime_error("invalid value of option \"selectionType\": " + std::to_string(selectionType_));
+  }
+
   addTH1D("weight", 100, -5, 5);
   addTH1D("eventsProcessed_unwgt", {0, 1});
   addTH1D("eventsProcessed", {0, 1});
@@ -233,7 +241,7 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     return;
   }
 
-  float const maxJetEtaAbs{3.0f};
+  float const maxJetEtaAbs{(selectionType_ == 0) ? 3.0f : 1.1f};
 
   // L1T Jets
   {
@@ -242,10 +250,14 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     auto const& a_eta = this->array<float>("L1Jet_eta");
     auto const& a_phi = this->array<float>("L1Jet_phi");
 
+    std::vector<int> jetIdxs(a_size);
+    std::iota(jetIdxs.begin(), jetIdxs.end(), 0);
+    std::stable_sort(jetIdxs.begin(), jetIdxs.end(), [&](int const i1, int const i2) { return a_pt[i1] > a_pt[i2]; });
+
     std::vector<int> sortIdxs{};
     sortIdxs.reserve(a_size);
 
-    for (auto idx{0}; idx < a_size; ++idx) {
+    for (auto const idx : jetIdxs) {
       auto const j_pt{a_pt[idx]};
       auto const j_eta{a_eta[idx]};
       auto const j_absEta{std::abs(j_eta)};
@@ -261,8 +273,6 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
       sortIdxs.emplace_back(idx);
     }
-
-    std::stable_sort(sortIdxs.begin(), sortIdxs.end(), [&](int const i1, int const i2) { return a_pt[i1] > a_pt[i2]; });
 
     Jet j1{};
     Jet j2{};
@@ -297,7 +307,10 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
     H1("L1TJet_passSelBx")->Fill(0.5, wgt);
 
-    if (nJets30 >= 2) {
+    bool const dijetCondition{
+        (selectionType_ == 1) ? (nJets30 >= 2 and j1.index == jetIdxs[0] and j2.index == jetIdxs[1]) : (nJets30 >= 2)};
+
+    if (dijetCondition) {
       H1("L1TJet_passSelBx_passDiJet30")->Fill(0.5, wgt);
 
       fill_dijet_plots("L1TJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, -1.f);
@@ -357,10 +370,14 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
     auto const& a_nConstSatECAL = this->array<uint16_t>("L1CaloJet_nConstSaturatedEnergyECAL");
     auto const& a_nConstSatHCAL = this->array<uint16_t>("L1CaloJet_nConstSaturatedEnergyHCAL");
 
+    std::vector<int> jetIdxs(a_size);
+    std::iota(jetIdxs.begin(), jetIdxs.end(), 0);
+    std::stable_sort(jetIdxs.begin(), jetIdxs.end(), [&](int const i1, int const i2) { return a_pt[i1] > a_pt[i2]; });
+
     std::vector<int> sortIdxs{};
     sortIdxs.reserve(a_size);
 
-    for (auto idx{0}; idx < a_size; ++idx) {
+    for (auto const idx : jetIdxs) {
       auto const j_pt{a_pt[idx]};
       auto const j_eta{a_eta[idx]};
       auto const j_absEta{std::abs(j_eta)};
@@ -398,8 +415,6 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
       sortIdxs.emplace_back(idx);
     }
-
-    std::stable_sort(sortIdxs.begin(), sortIdxs.end(), [&](int const i1, int const i2) { return a_pt[i1] > a_pt[i2]; });
 
     Jet j1{};
     Jet j2{};
@@ -443,7 +458,10 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
     H1("L1SCaloJet_passSelBx")->Fill(0.5, wgt);
 
-    if (nJets30 >= 2) {
+    bool const dijetCondition{
+        (selectionType_ == 1) ? (nJets30 >= 2 and j1.index == jetIdxs[0] and j2.index == jetIdxs[1]) : (nJets30 >= 2)};
+
+    if (dijetCondition) {
       H1("L1SCaloJet_passSelBx_passDiJet30")->Fill(0.5, wgt);
 
       fill_dijet_plots("L1SCaloJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, -1.f);
