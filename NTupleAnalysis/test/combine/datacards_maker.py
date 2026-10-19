@@ -16,7 +16,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--fileNames', nargs='+', type=str, required=True,
         help='List of files containing input histograms')
 
-    parser.add_argument('-e', '--extra-norm-factors', nargs='+', type=int, default=[1, 10, 30, 60, 120],
+    parser.add_argument('-e', '--extra-norm-factors', nargs='+', type=int, default=[1, 5, 10, 30, 60, 120],
         help='List of extra normalisation factors to all histograms')
 
     parser.add_argument('-l', '--luminosity-ipb', type=float, required=True,
