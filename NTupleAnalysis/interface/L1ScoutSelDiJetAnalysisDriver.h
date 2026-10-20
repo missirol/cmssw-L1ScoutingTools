@@ -37,6 +37,9 @@ protected:
 
   bool bxFilterDijetEt30() const;
 
+  void fill_plots_l1tJets(float const wgt, int const selectionType);
+  void fill_plots_l1sCaloJets(float const wgt, int const selectionType);
+
   void fill_dijet_plots(std::string const& plot_label,
                         float const wgt,
                         unsigned int const nJets30,
