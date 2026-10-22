@@ -3,7 +3,7 @@
 THIS_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
 "${THIS_DIR}"/datacards_maker.py \
-  -i "${THIS_DIR}"/../out2_l1sSelDiJet/outputs/*.root \
+  -i "${THIS_DIR}"/../out2_l1sSelDiJet_sel1/outputs/*.root \
   --lumi 5.6 \
   --fake-bkg \
   -e 1 5 10 30 60 120

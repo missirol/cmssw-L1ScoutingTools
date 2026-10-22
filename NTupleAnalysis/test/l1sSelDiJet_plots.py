@@ -500,7 +500,7 @@ def getPlotConfig(key, keyword, inputList):
     ##
     if keyword == 'run3_l1s_dijet01':
 
-       cfg.legXY = [0.35, 0.85, 0.95, 0.95]
+       cfg.legXY = [0.35, 0.80, 0.95, 0.88]
        cfg.legNColumns = 2
        if key.endswith('_pt') or key.endswith('_ptUncorr') or key.endswith('_mass') or '_nJets' in key:
            cfg.logY = True

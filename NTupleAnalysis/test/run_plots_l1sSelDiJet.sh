@@ -20,7 +20,7 @@ outdir=${TARGET_DIR}_plots_tmp
 
 rm -rf "${outdir}"{,.tar.gz}
 
-# Data, standard L1T Jets vs L1S Calo Jets
+# L1T Jets vs L1S Calo Jets: Data
 l1sSelDiJet_plots.py \
   -k run3_l1s_dijet01 \
   -m "*Jet*" \
@@ -28,7 +28,17 @@ l1sSelDiJet_plots.py \
   -o "${outdir}"/l1tJetsVsL1SCaloJets_data \
   -l "PD: L1ScoutingSelection (Run2026D)" \
   --tr-label "5.6 pb^{-1} (13.6 TeV)" \
-  -e pdf
+  -e pdf png
+
+# L1T Jets vs L1S Calo Jets: Zp400
+l1sSelDiJet_plots.py \
+  -k run3_l1s_dijet01 \
+  -m "*Jet*" \
+  -i "${inpdir}"/outputs/ZprimeToQQ_M400_TuneCP5_13p6TeV_pythia8.root:'N/A':1:2:20 \
+  -o "${outdir}"/l1tJetsVsL1SCaloJets_Zp400 \
+  -l "Z' #rightarrow q#bar{q}, M(Z')=400 GeV" \
+  --tr-label "13.6 TeV" \
+  -e pdf png
 
 # Data vs Signal MCs
 l1sSelDiJet_plots.py \
@@ -42,7 +52,7 @@ l1sSelDiJet_plots.py \
   -o "${outdir}"/dataVsZPrime \
   -l "" \
   --tr-label "5.6 pb^{-1} (13.6 TeV)" \
-  -e pdf
+  -e pdf png
 
 # Comparing jet-eta cuts on signal samples
 for sigmass in 200 300 400 500; do
