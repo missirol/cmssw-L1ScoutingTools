@@ -47,9 +47,14 @@ COMMON_OPTS+=" --datatier NANOAOD --eventcontent NANOAOD"
 COMMON_OPTS+=" --nThreads ${NTHREADS_PER_JOB} --nStreams 0"
 COMMON_OPTS+=" --no_exec"
 
+# Create grid-certificate proxy (if not already in place)
+if [ ! -f "${X509_USER_PROXY}" ]; then
+  voms-proxy-init --voms cms --rfc --valid 168:00
+fi
+
 cmsDriver.py "${JOB_LABEL}" --process NANO ${COMMON_OPTS} \
   --python_filename "${JOB_LABEL}"_cfg.py --fileout file:"${JOB_LABEL}"_out.root \
-  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMC \
+  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMCOnlyJets \
   -n 1
 
 cat <<@EOF >> "${JOB_LABEL}"_cfg.py
@@ -70,6 +75,7 @@ for sampleKey in ${!samplesMap[@]}; do
     --cpus "${NTHREADS_PER_JOB}" \
     --mem 1000 \
     --time 600 \
+    --os "${SCRAM_ARCH::3}" \
     -d "${sampleName}" \
     -p 0 \
     --JobFlavour "${JOB_HTC_FLAVOUR}" \

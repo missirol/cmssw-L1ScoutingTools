@@ -49,6 +49,9 @@ if __name__ == '__main__':
    parser.add_argument('--json', dest='json_file', action='store', default=None,
                        help='Path to JSON file to select a subset of luminosity sections')
 
+   parser.add_argument('--run-number', dest='run_number', action='store', type=int, default=None,
+                       help='Consider only the luminosity sections of a given run')
+
    parser.add_argument('-j', '--jobdirname', dest='jobdirname', action='store', default='job',
                        help='prefix of batch-job sub-directories (example: [JOBDIRNAME]_[counter]/)')
 
@@ -63,6 +66,9 @@ if __name__ == '__main__':
 
    parser.add_argument('-n', '--n-events', dest='n_events', action='store', type=int, default=-1,
                        help='maximum number of events per job')
+
+   parser.add_argument('-r', '--reportEvery', dest='reportEvery', action='store', type=int, default=1,
+                       help='number of events to trigger a report to stderr by the MessageLogger service')
 
    parser.add_argument('-p', '--parentFiles-level', dest='parentFiles_level', action='store', type=int, default=2,
                        help='level of parentFiles to be used as secondary input files (currently, anything other than 1 and 2 disables the usage of secondary input files)')
@@ -202,7 +208,7 @@ if __name__ == '__main__':
           input_dset = json.load(open(opts.dataset))
        else:
           which('dasgoclient')
-          input_dset_tmp = load_dataset_data2(das_name=opts.dataset, parentFiles_levels=opts.parentFiles_level, verbose=(opts.verbosity > 0))
+          input_dset_tmp = load_dataset_data2(das_name=opts.dataset, parentFiles_levels=opts.parentFiles_level, run_number=opts.run_number, verbose=(opts.verbosity > 0))
           input_dset = convert_dataset_data2(dset_data=input_dset_tmp, json_file_path=opts.json_file, max_lumis=opts.max_lumis, max_events=opts.max_events)
    else:
        if os.path.isfile(opts.dataset):
@@ -281,6 +287,11 @@ opts.register('skipEvents', 0,
               vpo.VarParsing.varType.int,
               'Value of process.source.skipEvents')
 
+opts.register('reportEvery', 1,
+              vpo.VarParsing.multiplicity.singleton,
+              vpo.VarParsing.varType.int,
+              'Value of process.MessageLogger.cerr.FwkReport.reportEvery')
+
 opts.register('nThreads', 1,
               vpo.VarParsing.multiplicity.singleton,
               vpo.VarParsing.varType.int,
@@ -308,6 +319,9 @@ process.maxEvents.input = opts.maxEvents
 
 # number of events to be skipped
 process.source.skipEvents = cms.untracked.uint32(opts.skipEvents)
+
+# every N events, the MessageLogger service emits a 1-line report to stderr
+process.MessageLogger.cerr.FwkReport.reportEvery = opts.reportEvery
 
 # number of threads (logical cores) and CMSSW streams (concurrent events)
 process.options.numberOfThreads = opts.nThreads
@@ -548,6 +562,7 @@ for outModLabel, outMod in process.outputModules_().items():
 
              cmsRun_opts += ' \\\n nThreads='+str(opts.cpus)
              cmsRun_opts += ' \\\n maxEvents='+str(i_maxEvents)
+             cmsRun_opts += ' \\\n reportEvery='+str(opts.reportEvery)
              cmsRun_opts += ' \\\n skipEvents='+str(opts.n_events*i_job)
              cmsRun_opts += ' \\\n inputFiles='+str(i_inputFile)
              if i_secondaryInputFiles:

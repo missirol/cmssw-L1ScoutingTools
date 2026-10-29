@@ -1,0 +1,420 @@
+#!/usr/bin/env python3
+"""
+ driver to set up batch jobs
+"""
+import argparse
+import glob
+import json
+import math
+import os
+import ROOT
+import stat
+
+from L1ScoutingTools.NTupleAnalysis.common import *
+
+def split_into_jobs_maxFiles(files, max_per_job):
+    """Split a list of input files into groups/jobs of up to max_per_job elements.
+
+    Each job is a dict:
+        {
+            "files":      [file, ...],  # input files of the job, in order
+            "skipEvents": int,          # events to skip in the first file
+            "maxEvents":  int,          # total events processed by the job (<= max_per_job)
+        }
+
+    The JSON output stores the jobs column-wise, i.e. one dict of lists, so that
+    each key appears only once; entry i of every list refers to job i:
+        {"files": [[...], ...], "skipEvents": [...], "maxEvents": [...]}
+
+    Convention: the first file is read after skipping `skipEvents` events,
+    middle files are read in full, and the last file is read until
+    `maxEvents` events in total have been processed.
+    """
+    if max_per_job <= 0:
+        raise ValueError('max_per_job must be positive')
+
+    jobs = []
+    cur_files, cur_skip, cur_n = [], 0, -1
+    tot_files = 0
+
+    for f in files:
+        cur_files.append(f)
+        # job is full: close it
+        if len(cur_files) == max_per_job:
+            jobs.append({'files': cur_files, 'skipEvents': cur_skip, 'maxEvents': cur_n})
+            tot_files += len(cur_files)
+            cur_files = []
+
+    # last, partially filled job
+    if cur_files:
+        jobs.append({'files': cur_files, 'skipEvents': cur_skip, 'maxEvents': cur_n})
+        tot_files += len(cur_files)
+
+    assert tot_files == len(files)
+
+    return jobs
+
+def split_into_jobs_maxEvents(files, n_events, max_per_job):
+    """Split a list of input files into jobs with a maximum number of events each.
+
+    Each job is a dict:
+        {
+            "files":      [file, ...],  # input files of the job, in order
+            "skipEvents": int,          # events to skip in the first file
+            "maxEvents":  int,          # total events processed by the job (<= max_per_job)
+        }
+
+    The JSON output stores the jobs column-wise, i.e. one dict of lists, so that
+    each key appears only once; entry i of every list refers to job i:
+        {"files": [[...], ...], "skipEvents": [...], "maxEvents": [...]}
+
+    Convention: the first file is read after skipping `skipEvents` events,
+    middle files are read in full, and the last file is read until
+    `maxEvents` events in total have been processed.
+    """
+    if max_per_job <= 0:
+        raise ValueError('max_per_job must be positive')
+
+    jobs = []
+    cur_files, cur_skip, cur_n = [], 0, 0
+
+    for f in files:
+        n_total = n_events[f]
+        offset = 0
+        # events of f already assigned
+        while offset < n_total:
+            # skipped for files with 0 events
+            if not cur_files:
+                # f is the first file of a new job
+                cur_skip = offset
+            take = min(n_total - offset, max_per_job - cur_n)
+            cur_files.append(f)
+            cur_n += take
+            offset += take
+            # job is full: close it
+            if cur_n == max_per_job:
+                jobs.append({'files': cur_files, 'skipEvents': cur_skip, 'maxEvents': cur_n})
+                cur_files, cur_skip, cur_n = [], 0, 0
+
+    # last, partially filled job
+    if cur_files:
+        jobs.append({'files': cur_files, 'skipEvents': cur_skip, 'maxEvents': cur_n})
+
+    return jobs
+
+def check_jobs(jobs, files, n_events, max_per_job):
+    """Sanity checks: limits respected, and every event covered exactly once."""
+    # no job is empty or exceeds the limit
+    assert all(0 < j['maxEvents'] <= max_per_job for j in jobs)
+
+    # total number of events is conserved
+    assert sum(j['maxEvents'] for j in jobs) == sum(n_events[f] for f in files)
+
+    # every file is covered event by event, without gaps or overlaps
+    # first event of f not yet covered
+    next_event = {f: 0 for f in files}
+    for job in jobs:
+        left, skip = job['maxEvents'], job['skipEvents']
+        for f in job['files']:
+            # contiguous with what came before
+            assert skip == next_event[f]
+            take = min(n_events[f] - skip, left)
+            assert take > 0
+            next_event[f] += take
+            left -= take
+            # only the first file is skipped into
+            skip = 0
+        assert left == 0
+    assert all(next_event[f] == n_events[f] for f in files)
+
+def jobs_to_columns(jobs):
+    """Convert a list of job dicts into a dict of lists (one list per key),
+    plus the number of jobs under the key "num_jobs"."""
+    columns = dict()
+    for key in ('files', 'skipEvents', 'maxEvents'):
+        columns[key] = [job[key] for job in jobs]
+    return columns
+
+if __name__ == '__main__':
+   ### args -----------
+   parser = argparse.ArgumentParser(
+       prog='./'+os.path.basename(__file__),
+       formatter_class=argparse.RawDescriptionHelpFormatter,
+       description=__doc__
+   )
+
+   parser.add_argument('-s', '--script', dest='script', action='store', required=True,
+                       help='path to python script executed in each batch job')
+
+   parser.add_argument('-i', '--inputs', dest='inputs', required=True, nargs='+', default=[],
+                       help='path to file(s) containing input TTree(s)')
+
+   parser.add_argument('-t', '--tree-name', dest='tree_name', action='store', default='Events',
+                       help='TTree key in input file(s)')
+
+   parser.add_argument('-p', '--plugin', dest='plugin', action='store', required=True,
+                       help='name of analysis plugin')
+
+   parser.add_argument('-o', '--output', dest='output', action='store', required=True,
+                       help='path to output directory')
+
+   group = parser.add_argument_group("Job options", "Number of input events/files per job")
+   group.add_argument('-m', '--maxEventsPerJob', dest='maxEventsPerJob', type=int, default=None,
+                       help='max number of input events per job')
+   group.add_argument('-f', '--maxFilesPerJob', dest='maxFilesPerJob', type=int, default=None,
+                       help='max number of input files per job')
+
+   parser.add_argument('--cpus', dest='cpus', action='store', type=int, default=1,
+                       help='number of CPUs per job (HTCondor: "RequestCpus"; SLURM: "--cpus-per-task")')
+
+   parser.add_argument('--memory', dest='memory', action='store', default=None,
+                       help='job max memory (HTCondor: "RequestMemory"; SLURM: "--mem")')
+
+   parser.add_argument('--time', dest='time', action='store', default=None,
+                       help='job runtime in number of seconds, or HH:MM:SS format (HTCondor: "+RequestRuntime"; SLURM: "--time")')
+
+   parser.add_argument('--os', dest='os', action='store', required=True,
+                       help='argument of HTCondor parameter "MY.WantOS"')
+
+   parser.add_argument('--JobFlavour', dest='JobFlavour', required=True,
+                       help='argument of HTCondor parameter "JobFlavour"')
+
+#   parser.add_argument('--AccountingGroup', dest='AccountingGroup', action='store', default=None,
+#                       help='argument of HTCondor parameter "+AccountingGroup" (by default, the parameter is not specified)')
+
+   parser.add_argument('--name', dest='job_name', action='store', default=None,
+                       help='name of batch job (HTCondor: "batch_name", SLURM: "--job-name") [default: basename of argument of "--output"]')
+
+   parser.add_argument('--batch', dest='batch', action='store', choices=['htc'], default='htc',
+                       help='type of batch system for job submission [default: HTCondor]')
+
+   parser.add_argument('--submit', dest='submit', action='store_true', default=False,
+                       help='submit job(s) to the batch system')
+
+   parser.add_argument('-l', '--level', dest='level', action='store', type=int, default=0,
+                       help='level of directory depth in output directory')
+
+   parser.add_argument('-d', '--dry-run', dest='dry_run', action='store_true', default=False,
+                       help='enable dry-run mode')
+
+   parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', default=False,
+                       help='enable verbose mode')
+
+   opts, opts_unknown = parser.parse_known_args()
+   ### ----------------
+
+   ROOT.gROOT.SetBatch()
+
+   log_prx = os.path.basename(__file__)+' -- '
+
+   ### args validation
+   if opts.level < 0:
+      KILL(log_prx+'negative level of directory depth in output directory (must be >=0) [-l]: '+str(opts.level))
+
+   PYSCRIPT_PATH = opts.script
+
+   if not os.path.isfile(PYSCRIPT_PATH):
+       KILL(log_prx+'target executable not found: '+PYSCRIPT_PATH)
+
+   PYSCRIPT_ABSPATH = os.path.abspath(os.path.realpath(PYSCRIPT_PATH))
+
+   INPUT_FILES = []
+   for i_inpf in opts.inputs:
+       i_inpf_ls = glob.glob(i_inpf)
+       for i_inpf_2 in i_inpf_ls:
+           if os.path.isfile(i_inpf_2):
+               INPUT_FILES += [os.path.abspath(i_inpf_2)]
+   INPUT_FILES = sorted(list(set(INPUT_FILES)))
+
+   if len(INPUT_FILES) == 0:
+       KILL(log_prx+'empty list of input files [-i]')
+
+   if os.path.isdir(opts.output):
+       WARNING(log_prx+'output directory already exists, new files will be added to it [-o]: '+opts.output)
+
+   elif os.path.exists(opts.output):
+       KILL(log_prx+'target path to output directory already exists and it is not a directory [-o]: '+opts.output)
+
+   OUTPUT_DIR = os.path.abspath(opts.output)
+
+   MKDIRP(OUTPUT_DIR, verbose=opts.verbose, dry_run=opts.dry_run)
+
+   BATCH_HTC = bool(opts.batch == 'htc')
+
+   if (not opts.dry_run) and opts.submit:
+       if BATCH_HTC:
+           which('condor_submit')
+
+   which('python3')
+
+   ### VOMS proxy
+   if 'X509_USER_PROXY' in os.environ:
+       voms_proxy_path = os.environ['X509_USER_PROXY']
+   else:
+       voms_proxy_path = '/tmp/x509up_u'+str(os.getuid())
+
+   if not os.path.isfile(voms_proxy_path):
+       EXE('voms-proxy-init --voms cms', verbose=opts.verbose, dry_run=opts.dry_run)
+
+   if not os.path.isfile(voms_proxy_path):
+       KILL(log_prx+'invalid path to voms proxy: '+voms_proxy_path)
+
+   if BATCH_HTC:
+       EXE('cp '+voms_proxy_path+' '+OUTPUT_DIR+'/X509_USER_PROXY', verbose=opts.verbose, dry_run=opts.dry_run)
+
+   ### output ---------
+   inputFiles, numEventsDict = list(), dict()
+
+   if opts.maxFilesPerJob != None:
+       jobsDict = split_into_jobs_maxFiles(INPUT_FILES, opts.maxFilesPerJob)
+       jobsDict = jobs_to_columns(jobsDict)
+
+   elif opts.maxEventsPerJob != None:
+       for i_inpf in INPUT_FILES:
+
+           if not os.path.isfile(i_inpf):
+              KILL(log_prx+'invalid target path to input file [-i]: '+i_inpf)
+
+           i_inptfile = ROOT.TFile.Open(i_inpf)
+           if not i_inptfile or i_inptfile.IsZombie():
+              KILL(log_prx+'failed to access TFile (will be skipped): path='+i_inpf)
+
+           i_tree = i_inptfile.Get(opts.tree_name)
+           if not i_tree:
+              KILL(log_prx+'TFile does not contain TObject with key "'+opts.tree_name+'": path='+i_inpf)
+
+           i_evtN = i_tree.GetEntries()
+           if not i_tree:
+              WARNING(log_prx+'GetEntries()==0 for TObject with key "'+opts.tree_name+'": path='+i_inpf)
+              continue
+
+           inputFiles.append(i_inpf)
+           numEventsDict[i_inpf] = i_evtN
+           print(len(INPUT_FILES), i_inpf)
+           i_inptfile.Close()
+
+       jobsDict = split_into_jobs_maxEvents(inputFiles, numEventsDict, opts.maxEventsPerJob)
+       check_jobs(jobsDict, inputFiles, numEventsDict, opts.maxEventsPerJob)
+       jobsDict = jobs_to_columns(jobsDict)
+
+   else:
+       KILL(f'{log_prx}' + 'Specify a value for either --maxFilesPerJob or --maxEventsPerJob')
+
+   numJobs = len(jobsDict["files"])
+
+   if numJobs == 0:
+       KILL(f'{log_prx}' + 'the number of expected jobs is zero')
+
+   with open(os.path.join(f'{OUTPUT_DIR}', 'jobs.json'), 'w') as outf:
+       json.dump(jobsDict, outf, indent=4)
+
+   for jobIdx in range(numJobs):
+       out_subdir = os.path.join(f'{OUTPUT_DIR}', f'job_{jobIdx}')
+       MKDIRP(os.path.join(f'{out_subdir}', 'logs'), verbose=opts.verbose, dry_run=opts.dry_run)
+       # create (empty) queue-file to trigger job submission
+       EXE('touch ' + os.path.join(out_subdir, "flag.queue"), verbose=opts.verbose, dry_run=opts.dry_run)
+
+   exef_path = os.path.join(f'{OUTPUT_DIR}', 'exe.sh')
+   with open(exef_path, 'w') as exef:
+        exef.write(f"""\
+#!/bin/bash -ex
+
+MY_CMSSW_BASE={os.environ["CMSSW_BASE"]}
+MY_OUTPUT_DIR={OUTPUT_DIR}
+MY_EXE={PYSCRIPT_ABSPATH}
+
+[ $# -eq 1 ] || exit 1
+
+MY_JOB_INDEX="${{1}}"
+
+cd "${{MY_CMSSW_BASE}}"/src
+eval `scramv1 runtime -sh`
+
+cd "${{MY_OUTPUT_DIR}}"/job_"${{MY_JOB_INDEX}}"
+
+mapfile -t JOB_SPECS < <(../get_job_specs.py ../jobs.json "${{MY_JOB_INDEX}}")
+
+[ ! -f flag.done ] || exit 0
+
+${{MY_EXE}} \\
+  -p {opts.plugin} {' '.join(opts_unknown)} \\
+  --skipEvents ${{JOB_SPECS[0]}} --maxEvents ${{JOB_SPECS[1]}} \\
+  -o out.root -i ${{JOB_SPECS[*]:2}}
+
+touch flag.done
+""")
+   os.chmod(exef_path, os.stat(exef_path).st_mode | stat.S_IEXEC)
+
+   gjsf_path = os.path.join(f'{OUTPUT_DIR}', 'get_job_specs.py')
+   with open(gjsf_path, 'w') as gjsf:
+        gjsf.write('''\
+#!/usr/bin/env python3
+"""Print the description of one job from a JSON file produced by split_jobs.py.
+
+Output (to stdout):
+    line  1:     number of events to skip in the first file
+    line  2:     number of events processed by the job
+    lines 3...:  input files of the job, one per line
+"""
+import argparse
+import json
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('json_file', help='path to the JSON file with the job definitions')
+    parser.add_argument('index', type=int, help='job index, between 0 and num_jobs-1')
+    args = parser.parse_args()
+
+    try:
+        with open(args.json_file) as f:
+            jobs = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        sys.exit(f'error: cannot read "{args.json_file}": {e}')
+
+    for key in ('files', 'skipEvents', 'maxEvents'):
+        if key not in jobs:
+            sys.exit(f'error: key "{key}" not found in "{args.json_file}"')
+
+    num_jobs = len(jobs['files'])
+    if not 0 <= args.index < num_jobs:
+        sys.exit(f'error: index {args.index} out of range, '
+                 f'it must be between 0 and {num_jobs - 1} (num_jobs = {num_jobs})')
+
+    print(jobs['skipEvents'][args.index])
+    print(jobs['maxEvents'][args.index])
+    for input_file in jobs['files'][args.index]:
+        print(input_file)
+
+if __name__ == '__main__':
+    main()
+''')
+   os.chmod(gjsf_path, os.stat(gjsf_path).st_mode | stat.S_IEXEC)
+
+   subf_path = os.path.join(f'{OUTPUT_DIR}', 'condor.sub')
+   with open(subf_path, 'w') as subf:
+        jobName = opts.job_name if opts.job_name != None else '$Fn(BASEDIR)'
+        subf.write(f"""\
+BASEDIR = {OUTPUT_DIR}
+SUBDIR = $Fdb(QFILE)
+batch_name = {jobName}
+executable = $(BASEDIR)/exe.sh
+arguments = $SUBSTR(SUBDIR, 4)
+output = $(BASEDIR)/$(SUBDIR)/logs/out.$(Cluster).$(Process)
+error = $(BASEDIR)/$(SUBDIR)/logs/err.$(Cluster).$(Process)
+log = $(BASEDIR)/$(SUBDIR)/logs/log.$(Cluster).$(Process)
+universe = vanilla
+getenv = True
+should_transfer_files = IF_NEEDED
+when_to_transfer_output = ON_EXIT
+MY.WantOS = "{opts.os}"
+RequestCpus = {opts.cpus}
++JobFlavour = "{opts.JobFlavour}"
+x509userproxy = $(BASEDIR)/X509_USER_PROXY
+queue QFILE matching files $(BASEDIR)/job_*/flag.queue
+""")
+
+   if opts.submit:
+       if BATCH_HTC:
+           EXE('condor_submit '+SUBFILE_ABSPATH, suspend=False, verbose=opts.verbose, dry_run=opts.dry_run)

@@ -145,7 +145,7 @@ if __name__ == '__main__':
    ## create output directory
    output_dirname = os.path.dirname(os.path.abspath(opts.output))
    if not os.path.isdir(output_dirname):
-      EXE('mkdir -p '+output_dirname, verbose=options.verbosity > 0, dry_run=options.dry_run)
+      EXE('mkdir -p '+output_dirname, verbose=opts.verbosity > 0, dry_run=opts.dry_run)
    del output_dirname
 
    skipEvents = opts.skipEvents

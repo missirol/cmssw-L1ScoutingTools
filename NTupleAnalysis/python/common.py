@@ -193,6 +193,32 @@ def HTCondor_jobExecutables(username=None):
 
     return _condorq_jobExes_dict
 
+def HTCondor_jobExecutables2(username=None):
+    if not username:
+       if 'USER' in os.environ: username = os.environ['USER']
+
+    if not username:
+       KILL('HTCondor_jobExecutables -- unspecified argument "username"')
+
+    _condorq_jobExes_dict = {}
+
+    _condorq_cmd = f'condor_q {username} -format "%d." ClusterId -format "%d" ProcId -format " %s" Cmd -format " %s\\n" Args'
+
+    _condorq_lines = get_output(_condorq_cmd, permissive=True)[0].split('\n')
+
+    for _i_condorq_line in _condorq_lines:
+
+        _i_condorq_cmd_pieces = _i_condorq_line.split()
+
+        if len(_i_condorq_cmd_pieces) != 3: continue
+
+        _exe_path = os.path.dirname(os.path.abspath(_i_condorq_cmd_pieces[1]))
+        _exe_path += f'/job_{_i_condorq_cmd_pieces[2]}'
+
+        _condorq_jobExes_dict[_exe_path] = _i_condorq_cmd_pieces[0]
+
+    return _condorq_jobExes_dict
+
 def HTCondor_executable_from_jobID(jobID):
     _condorq_cmd = get_output('condor_q '+jobID+' -long')[0].split('\n')
     _condorq_cmd = [_tmp for _tmp in _condorq_cmd if _tmp.startswith('Cmd = ')]

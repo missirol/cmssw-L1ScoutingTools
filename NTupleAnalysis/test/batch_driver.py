@@ -8,7 +8,7 @@ import math
 import glob
 import ROOT
 
-from common.utils import *
+from L1ScoutingTools.NTupleAnalysis.common import *
 
 if __name__ == '__main__':
    ### args -----------

@@ -15,7 +15,7 @@ COMMON_OPTS+=" --no_exec"
 
 cmsDriver.py "${JOB_LABEL}" --process TEST ${COMMON_OPTS} \
   --python_filename "${JOB_LABEL}"_cfg.py --fileout file:"${JOB_LABEL}"_out.root \
-  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMC \
+  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMCOnlyJets \
   -n 10
 
 cat <<@EOF >> "${JOB_LABEL}"_cfg.py

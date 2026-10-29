@@ -3,13 +3,13 @@
 jobLabel=tmp_testL1ScoutingReReco
 
 nanoFlavours=(
-  L1ScoutReReco
-  L1ScoutReRecoSelect
+#  L1ScoutReRecoOnlyJets
+  L1ScoutReRecoOnlyJetsSelect
 )
 
 declare -A inputFiles=(
-  ["L1ScoutReReco"]="/store/data/Run2026B/L1Scouting/L1SCOUT/v1/000/402/244/00001/65ecfc3f-65b1-443b-bf0a-a087d35dc453.root"
-  ["L1ScoutReRecoSelect"]="/store/data/Run2026D/L1ScoutingSelection/L1SCOUT/v1/000/403/937/00000/d5af5899-290d-44b7-b33d-e77a487e3fb2.root"
+  ["L1ScoutReRecoOnlyJets"]="/store/data/Run2026B/L1Scouting/L1SCOUT/v1/000/402/244/00001/65ecfc3f-65b1-443b-bf0a-a087d35dc453.root"
+  ["L1ScoutReRecoOnlyJetsSelect"]="/store/data/Run2026D/L1ScoutingSelection/L1SCOUT/v1/000/403/937/00000/d5af5899-290d-44b7-b33d-e77a487e3fb2.root"
 )
 
 maxEvents=100

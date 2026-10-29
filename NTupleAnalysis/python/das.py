@@ -150,7 +150,7 @@ def skim_das_jsondump(file_path, max_files=-1, max_events=-1, verbose=False):
 
     return dset_data
 
-def load_dataset_data2(das_name, max_events=-1, parentFiles_levels=0, files_prefix='', verbose=False):
+def load_dataset_data2(das_name, max_events=-1, parentFiles_levels=0, files_prefix='', run_number=None, verbose=False):
 
     if verbose:
         print(colored_text(das_name, ['1']))
@@ -163,12 +163,16 @@ def load_dataset_data2(das_name, max_events=-1, parentFiles_levels=0, files_pref
 
     dataset_keyword = 'block' if '#' in dataset_split[3] else 'dataset'
 
-    das_query = f'dasgoclient --query "file,run,lumi {dataset_keyword}={das_name}"'
+    das_query_cond = f'{dataset_keyword}={das_name}'
+    if run_number != None:
+        das_query_cond = f'run={run_number} {das_query_cond}'
+
+    das_query = f'dasgoclient --query "file,run,lumi {das_query_cond}"'
     dataset_fileRunLumi_output_lines = command_output_lines(das_query)
     dataset_fileRunLumi_output_lines = [_tmp for _tmp in dataset_fileRunLumi_output_lines if _tmp != '']
     dataset_fileRunLumi_output_lines = sorted(list(set(dataset_fileRunLumi_output_lines)))
 
-    das_query2 = f'dasgoclient --query "file {dataset_keyword}={das_name} | grep file.name,file.nevents"'
+    das_query2 = f'dasgoclient --query "file {das_query_cond} | grep file.name,file.nevents"'
     dataset_fileNEvents_output_lines = command_output_lines(das_query2)
     dataset_fileNEvents_output_lines = [_tmp for _tmp in dataset_fileNEvents_output_lines if _tmp != '']
     dataset_fileNEvents_output_lines = sorted(list(set(dataset_fileNEvents_output_lines)))

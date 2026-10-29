@@ -144,6 +144,7 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+      addTH2D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
@@ -203,6 +204,7 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
@@ -619,6 +621,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_lab
       H1(plot_label + "_J1J2_deltaPhi")->Fill(deltaPhi, wgt);
 
       H1(plot_label + "_J1J2_deltaRapAbs")->Fill(deltaRapAbs, wgt);
+      H2(plot_label + "_J1J2_deltaRapAbs_deltaPhiAbs")->Fill(deltaRapAbs, deltaPhiAbs, wgt);
       H1(plot_label + "_J1J2_deltaEtaAbs")->Fill(deltaEtaAbs, wgt);
       H1(plot_label + "_J1J2_deltaPhiAbs")->Fill(deltaPhiAbs, wgt);
     }
