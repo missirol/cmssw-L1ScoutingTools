@@ -49,6 +49,9 @@ if __name__ == '__main__':
    parser.add_argument('--json', dest='json_file', action='store', default=None,
                        help='Path to JSON file to select a subset of luminosity sections')
 
+   parser.add_argument('--run-number', dest='run_number', action='store', type=int, default=None,
+                       help='Consider only the luminosity sections of a given run')
+
    parser.add_argument('-j', '--jobdirname', dest='jobdirname', action='store', default='job',
                        help='prefix of batch-job sub-directories (example: [JOBDIRNAME]_[counter]/)')
 
@@ -202,7 +205,7 @@ if __name__ == '__main__':
           input_dset = json.load(open(opts.dataset))
        else:
           which('dasgoclient')
-          input_dset_tmp = load_dataset_data2(das_name=opts.dataset, parentFiles_levels=opts.parentFiles_level, verbose=(opts.verbosity > 0))
+          input_dset_tmp = load_dataset_data2(das_name=opts.dataset, parentFiles_levels=opts.parentFiles_level, run_number=opts.run_number, verbose=(opts.verbosity > 0))
           input_dset = convert_dataset_data2(dset_data=input_dset_tmp, json_file_path=opts.json_file, max_lumis=opts.max_lumis, max_events=opts.max_events)
    else:
        if os.path.isfile(opts.dataset):

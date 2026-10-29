@@ -32,7 +32,7 @@ cmsrel CMSSW_17_0_0_pre5
 cd CMSSW_17_0_0_pre5/src
 cmsenv
 git cms-init --ssh
-git cms-merge-topic missirol:devel_l1sRun3CaloTowers_170X
+git cms-merge-topic missirol:devel_l1sRun3CaloTowers_170X_v2
 git clone git@github.com:missirol/cmssw-L1ScoutingTools.git L1ScoutingTools -o missirol
 scram build
 ```
