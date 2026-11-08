@@ -7,7 +7,7 @@ import array
 import re
 import ROOT
 
-from common.utils import *
+from L1ScoutingTools.NTupleAnalysis.common import *
 
 #### main
 if __name__ == '__main__':
@@ -21,7 +21,10 @@ if __name__ == '__main__':
                        help='path to output directory')
 
    parser.add_argument('-m', '--match-regexes', nargs='+', default=['^(.*)__[0-9]+$'],
-                       help='Ordered list of regex expressions to extract the basename of the output file from the basename of the input file without file extension')
+                       help='Ordered list of regex expressions to extract the basename of the output file from the name of the input file')
+
+   parser.add_argument('-x', '--match-index', type=int, default=1,
+                       help='Regex-match group index corresponding to the basename of the output file')
 
    parser.add_argument('-l', '--level', action='store', type=int, default=0,
                        help='level of directory depth in output directory')
@@ -69,13 +72,11 @@ if __name__ == '__main__':
 
    for i_input in INPUT_FILES:
 
-       input_basename_woExt = os.path.splitext(os.path.basename(i_input))[0]
-
        output_name_pieces = None
        for re_compile in re_compiles:
            try:
-               re_match = re_compile.match(input_basename_woExt)
-               output_name_pieces = [re_match.group(1)]
+               re_match = re_compile.match(i_input)
+               output_name_pieces = [re_match.group(opts.match_index)]
                break
            except:
                pass
@@ -94,6 +95,8 @@ if __name__ == '__main__':
           outputs_dict[output_name] = []
 
        outputs_dict[output_name] += [i_input]
+
+       print(output_name, i_input)
 
    for i_output in sorted(outputs_dict.keys()):
 

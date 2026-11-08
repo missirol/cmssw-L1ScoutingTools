@@ -336,6 +336,8 @@ mapfile -t JOB_SPECS < <(../get_job_specs.py ../jobs.json "${{MY_JOB_INDEX}}")
 
 [ ! -f flag.done ] || exit 0
 
+rm -f out.root
+
 ${{MY_EXE}} \\
   -p {opts.plugin} {' '.join(opts_unknown)} \\
   --skipEvents ${{JOB_SPECS[0]}} --maxEvents ${{JOB_SPECS[1]}} \\

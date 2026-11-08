@@ -120,7 +120,22 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
   addTH1D("L1TJet_passSelBx_passTheDiJet", {0, 1});
 
   std::vector<std::string> const tags1{"Std", "Cmb"};
-  std::vector<std::string> const tags2{"Mjj150", "Mjj150dY1p1dPhi1p0"};
+
+  std::vector<std::string> const tags2{
+      "Mjj150",
+      "Mjj150dPhi1p0dY0p0to1p1",
+      "Mjj150dPhi1p0dY0p0to0p1",
+      "Mjj150dPhi1p0dY0p1to0p2",
+      "Mjj150dPhi1p0dY0p2to0p3",
+      "Mjj150dPhi1p0dY0p3to0p4",
+      "Mjj150dPhi1p0dY0p4to0p5",
+      "Mjj150dPhi1p0dY0p5to0p6",
+      "Mjj150dPhi1p0dY0p6to0p7",
+      "Mjj150dPhi1p0dY0p7to0p8",
+      "Mjj150dPhi1p0dY0p8to0p9",
+      "Mjj150dPhi1p0dY0p9to1p0",
+      "Mjj150dPhi1p0dY1p0to1p1",
+  };
 
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
@@ -144,7 +159,8 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+      addTH2D(
+          "L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
       addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
@@ -204,7 +220,9 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs",
+              binEdges_deltaRapAbs,
+              binEdges_deltaPhiAbs);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
       addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
@@ -346,8 +364,35 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
 
   H1("L1TJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
-  fill_dijet_plots("L1TJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, -1.f);
-  fill_dijet_plots("L1TJet_Std_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 1.1f, 1.0f);
+  fill_dijet_plots("L1TJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, -1.f, -1.f);
+
+  constexpr auto pi3_f{std::numbers::pi_v<float> / 3.f};
+
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, 1.1f, pi3_f);
+
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p0to0p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, 0.1f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p1to0p2", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.1f, 0.2f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p2to0p3", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.2f, 0.3f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p3to0p4", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.3f, 0.4f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p4to0p5", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.4f, 0.5f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p5to0p6", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.5f, 0.6f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p6to0p7", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.6f, 0.7f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p7to0p8", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.7f, 0.8f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p8to0p9", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.8f, 0.9f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY0p9to1p0", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.9f, 1.0f, pi3_f);
+  fill_dijet_plots(
+      "L1TJet_Std_Mjj150dPhi1p0dY1p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 1.0f, 1.1f, pi3_f);
 
   Jet j1_cmb{j1};
   j1_cmb.index = -1;
@@ -383,9 +428,151 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
     std::swap(j1_cmb, j2_cmb);
   }
 
-  fill_dijet_plots("L1TJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 150.f, -1.f, -1.f);
-  fill_dijet_plots(
-      "L1TJet_Cmb_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, 150.f, 1.1f, 1.0f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p0to1p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   -1.f,
+                   1.1f,
+                   pi3_f);
+
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p0to0p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   -1.f,
+                   0.1f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p1to0p2",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.1f,
+                   0.2f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p2to0p3",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.2f,
+                   0.3f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p3to0p4",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.3f,
+                   0.4f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p4to0p5",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.4f,
+                   0.5f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p5to0p6",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.5f,
+                   0.6f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p6to0p7",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.6f,
+                   0.7f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p7to0p8",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.7f,
+                   0.8f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p8to0p9",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.8f,
+                   0.9f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p9to1p0",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   0.9f,
+                   1.0f,
+                   pi3_f);
+  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY1p0to1p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   false,
+                   150.f,
+                   1.0f,
+                   1.1f,
+                   pi3_f);
 }
 
 void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int const selectionType) {
@@ -509,9 +696,35 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
 
   H1("L1SCaloJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
-  fill_dijet_plots("L1SCaloJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, -1.f);
+  fill_dijet_plots("L1SCaloJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, -1.f, -1.f);
+
+  constexpr auto pi3_f{std::numbers::pi_v<float> / 3.f};
+
   fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 1.1f, 1.0f);
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, 1.1f, pi3_f);
+
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p0to0p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, 0.1f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p1to0p2", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.1f, 0.2f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p2to0p3", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.2f, 0.3f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p3to0p4", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.3f, 0.4f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p4to0p5", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.4f, 0.5f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p5to0p6", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.5f, 0.6f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p6to0p7", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.6f, 0.7f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p7to0p8", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.7f, 0.8f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p8to0p9", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.8f, 0.9f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p9to1p0", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.9f, 1.0f, pi3_f);
+  fill_dijet_plots(
+      "L1SCaloJet_Std_Mjj150dPhi1p0dY1p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 1.0f, 1.1f, pi3_f);
 
   Jet j1_cmb{j1};
   j1_cmb.index = -1;
@@ -552,9 +765,154 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
     std::swap(j1_cmb, j2_cmb);
   }
 
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, -1.f, -1.f);
   fill_dijet_plots(
-      "L1SCaloJet_Cmb_Mjj150dY1p1dPhi1p0", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, 1.1f, 1.0f);
+      "L1SCaloJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, -1.f, -1.f, -1.f);
+
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p0to1p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   -1.f,
+                   1.1f,
+                   pi3_f);
+
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p0to0p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   -1.f,
+                   0.1f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p1to0p2",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.1f,
+                   0.2f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p2to0p3",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.2f,
+                   0.3f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p3to0p4",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.3f,
+                   0.4f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p4to0p5",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.4f,
+                   0.5f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p5to0p6",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.5f,
+                   0.6f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p6to0p7",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.6f,
+                   0.7f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p7to0p8",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.7f,
+                   0.8f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p8to0p9",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.8f,
+                   0.9f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p9to1p0",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   0.9f,
+                   1.0f,
+                   pi3_f);
+  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY1p0to1p1",
+                   wgt,
+                   nJets30,
+                   nJets40,
+                   nJets50,
+                   j1_cmb,
+                   j2_cmb,
+                   true,
+                   150.f,
+                   1.0f,
+                   1.1f,
+                   pi3_f);
 }
 
 void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_label,
@@ -566,6 +924,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_lab
                                                      Jet const& j2,
                                                      bool const fillExtraJetVars,
                                                      float const minDijetMass,
+                                                     float const minDijetDeltaRapAbs,
                                                      float const maxDijetDeltaRapAbs,
                                                      float const minDijetDeltaPhiAbs) {
   auto const j1j2_p4{j1.p4 + j2.p4};
@@ -581,8 +940,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_lab
     auto const deltaEtaAbs{std::abs(deltaEta)};
     auto const deltaPhiAbs{std::abs(deltaPhi)};
 
-    if ((maxDijetDeltaRapAbs < 0.f or deltaRapAbs < maxDijetDeltaRapAbs) and
-        (minDijetDeltaPhiAbs < 0.f or deltaPhiAbs > minDijetDeltaPhiAbs)) {
+    if ((minDijetDeltaRapAbs < 0.f or deltaRapAbs >= minDijetDeltaRapAbs) and
+        (maxDijetDeltaRapAbs < 0.f or deltaRapAbs < maxDijetDeltaRapAbs) and
+        (minDijetDeltaPhiAbs < 0.f or deltaPhiAbs >= minDijetDeltaPhiAbs)) {
       H1(plot_label + "_nJets30")->Fill(nJets30, wgt);
       H1(plot_label + "_nJets40")->Fill(nJets40, wgt);
       H1(plot_label + "_nJets50")->Fill(nJets50, wgt);

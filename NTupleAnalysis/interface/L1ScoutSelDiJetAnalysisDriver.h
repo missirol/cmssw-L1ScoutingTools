@@ -49,6 +49,7 @@ protected:
                         Jet const& j2,
                         bool const fillExtraJetVars,
                         float const minDijetMass,
+                        float const minDijetDeltaRapAbs,
                         float const maxDijetDeltaRapAbs,
                         float const minDijetDeltaPhiAbs);
 };
