@@ -294,7 +294,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
 
   auto nSatJets{0u};
 
-  float const maxJetEtaAbs{(selectionType == 0) ? 3.0f : 1.1f};
+  float const maxJetEtaAbs{(selectionType == 0) ? 2.8f : 1.1f};
 
   for (auto const idx : jetIdxs) {
     auto const j_pt{a_pt[idx]};
@@ -315,7 +315,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
     sortIdxs.emplace_back(idx);
   }
 
-  if (selectionType == 1 and nSatJets > 0) {
+  if (nSatJets > 0) {
     return;
   }
 
@@ -358,7 +358,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
 
   H1("L1TJet_passSelBx_passAnyDiJet")->Fill(0.5, wgt);
 
-  if (selectionType == 1 and not(j1.index == jetIdxs[0] and j2.index == jetIdxs[1])) {
+  if (j1.index != jetIdxs[0] or j2.index != jetIdxs[1]) {
     return;
   }
 
@@ -594,7 +594,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
   std::vector<int> sortIdxs{};
   sortIdxs.reserve(a_size);
 
-  float const maxJetEtaAbs{(selectionType == 0) ? 3.0f : 1.1f};
+  float const maxJetEtaAbs{(selectionType == 0) ? 2.8f : 1.1f};
 
   auto nSatJets{0u};
 
@@ -638,7 +638,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
     sortIdxs.emplace_back(idx);
   }
 
-  if (selectionType == 1 and nSatJets > 0) {
+  if (nSatJets > 0) {
     return;
   }
 
@@ -690,7 +690,7 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
 
   H1("L1SCaloJet_passSelBx_passAnyDiJet")->Fill(0.5, wgt);
 
-  if (selectionType == 1 and not(j1.index == jetIdxs[0] and j2.index == jetIdxs[1])) {
+  if (j1.index != jetIdxs[0] or j2.index != jetIdxs[1]) {
     return;
   }
 
