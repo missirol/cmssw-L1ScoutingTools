@@ -3,7 +3,7 @@
 TARGET_DIR=out2_l1sSelDiJet
 [ $# -lt 1 ] || TARGET_DIR="${1}"
 
-SELEC_TYPE=1
+SELEC_TYPE=0
 [ $# -lt 2 ] || SELEC_TYPE="${2}"
 
 THIS_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)

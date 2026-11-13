@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <format>
 #include <numbers>
 #include <numeric>
 #include <stdexcept>
@@ -121,50 +122,69 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
 
   std::vector<std::string> const tags1{"Std", "Cmb"};
 
-  std::vector<std::string> const tags2{
-      "Mjj150",
-      "Mjj150dPhi1p0dY0p0to1p1",
-      "Mjj150dPhi1p0dY0p0to0p1",
-      "Mjj150dPhi1p0dY0p1to0p2",
-      "Mjj150dPhi1p0dY0p2to0p3",
-      "Mjj150dPhi1p0dY0p3to0p4",
-      "Mjj150dPhi1p0dY0p4to0p5",
-      "Mjj150dPhi1p0dY0p5to0p6",
-      "Mjj150dPhi1p0dY0p6to0p7",
-      "Mjj150dPhi1p0dY0p7to0p8",
-      "Mjj150dPhi1p0dY0p8to0p9",
-      "Mjj150dPhi1p0dY0p9to1p0",
-      "Mjj150dPhi1p0dY1p0to1p1",
-  };
+  float const cut_minMjj{170.f};
+  std::vector<float> cut_dRap{0.f, 0.5f, 1.f, 1.5f, 2.f};
+  std::vector<float> cut_dPhi{2.1f, 2.8f, 2.9f, 3.0f, 3.05f, 3.2f};
+
+  std::stable_sort(cut_dRap.begin(), cut_dRap.end());
+  std::stable_sort(cut_dPhi.begin(), cut_dPhi.end());
+
+  std::vector<std::string> tags2;
+  tags2.reserve(1 + (cut_dRap.size() - 1) * (cut_dPhi.size() - 1));
+
+  sr_sel_map_.clear();
+  std::string const label_mjjcut{"Mjj" + std::to_string(int(cut_minMjj))};
+  sr_sel_map_.insert({label_mjjcut, dijetCut(cut_minMjj)});
+  tags2.emplace_back(label_mjjcut);
+
+  for (auto ri{1u}; ri < cut_dRap.size(); ++ri) {
+    auto const dRapMin{cut_dRap[ri - 1]};
+    auto const dRapMax{cut_dRap[ri]};
+
+    for (auto pi{1u}; pi < cut_dPhi.size(); ++pi) {
+      auto const dPhiMin{cut_dPhi[pi - 1]};
+      auto const dPhiMax{cut_dPhi[pi]};
+
+      std::string label{label_mjjcut + "dRap" + std::format("{:.2f}", dRapMin) + "to" +
+                              std::format("{:.2f}", dRapMax) + "dPhi" + std::format("{:.2f}", dPhiMin) + "to" +
+                              std::format("{:.2f}", dPhiMax)};
+      std::replace(label.begin(), label.end(), '.', 'p');
+
+      sr_sel_map_.insert({label, dijetCut(cut_minMjj, dRapMin, dRapMax, dPhiMin, dPhiMax)});
+
+      tags2.emplace_back(label);
+    }
+  }
 
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_nJets30", binEdges_njets);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_nJets40", binEdges_njets);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_nJets50", binEdges_njets);
+      auto const jet_tag{"L1TJet_" + tag1 + "_" + tag2};
 
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1_pt", binEdges_pt);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1_eta", binEdges_eta);
-      addTH2D("L1TJet_" + tag1 + "_" + tag2 + "_J1_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1_phi", binEdges_phi);
+      addTH1D(jet_tag + "_nJets30", binEdges_njets);
+      addTH1D(jet_tag + "_nJets40", binEdges_njets);
+      addTH1D(jet_tag + "_nJets50", binEdges_njets);
 
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J2_pt", binEdges_pt);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J2_eta", binEdges_eta);
-      addTH2D("L1TJet_" + tag1 + "_" + tag2 + "_J2_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J2_phi", binEdges_phi);
+      addTH1D(jet_tag + "_J1_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J1_eta", binEdges_eta);
+      addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
+      addTH1D(jet_tag + "_J1_phi", binEdges_phi);
 
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_pt", binEdges_pt);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_eta", binEdges_eta2);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_phi", binEdges_phi);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D(
-          "L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
-      addTH1D("L1TJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+      addTH1D(jet_tag + "_J2_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J2_eta", binEdges_eta);
+      addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
+      addTH1D(jet_tag + "_J2_phi", binEdges_phi);
+
+      addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
+      addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
+      addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
+      addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
+      addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+      addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+      addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
+      addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
+      addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
+      addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
     }
   }
 
@@ -190,43 +210,43 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
 
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_nJets30", binEdges_njets);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_nJets40", binEdges_njets);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_nJets50", binEdges_njets);
+      auto const jet_tag{"L1SCaloJet_" + tag1 + "_" + tag2};
 
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_pt", binEdges_pt);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_ptUncorr", binEdges_pt);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_eta", binEdges_eta);
-      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_phi", binEdges_phi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_mass", binEdges_mass);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_energyCorr", binEdges_energyCorr);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_energyFracEm", binEdges_energyFracEm);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1_nConst", binEdges_nConst);
+      addTH1D(jet_tag + "_nJets30", binEdges_njets);
+      addTH1D(jet_tag + "_nJets40", binEdges_njets);
+      addTH1D(jet_tag + "_nJets50", binEdges_njets);
 
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_pt", binEdges_pt);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_ptUncorr", binEdges_pt);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_eta", binEdges_eta);
-      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_phi", binEdges_phi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_mass", binEdges_mass);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_energyCorr", binEdges_energyCorr);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_energyFracEm", binEdges_energyFracEm);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J2_nConst", binEdges_nConst);
+      addTH1D(jet_tag + "_J1_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J1_ptUncorr", binEdges_pt);
+      addTH1D(jet_tag + "_J1_eta", binEdges_eta);
+      addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
+      addTH1D(jet_tag + "_J1_phi", binEdges_phi);
+      addTH1D(jet_tag + "_J1_mass", binEdges_mass);
+      addTH1D(jet_tag + "_J1_energyCorr", binEdges_energyCorr);
+      addTH1D(jet_tag + "_J1_energyFracEm", binEdges_energyFracEm);
+      addTH1D(jet_tag + "_J1_nConst", binEdges_nConst);
 
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_pt", binEdges_pt);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_eta", binEdges_eta2);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_phi", binEdges_phi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_mass", binEdges_mass2);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRap", binEdges_deltaRap);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaRapAbs_deltaPhiAbs",
-              binEdges_deltaRapAbs,
-              binEdges_deltaPhiAbs);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEta", binEdges_deltaEta);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhi", binEdges_deltaPhi);
-      addTH1D("L1SCaloJet_" + tag1 + "_" + tag2 + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+      addTH1D(jet_tag + "_J2_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J2_ptUncorr", binEdges_pt);
+      addTH1D(jet_tag + "_J2_eta", binEdges_eta);
+      addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
+      addTH1D(jet_tag + "_J2_phi", binEdges_phi);
+      addTH1D(jet_tag + "_J2_mass", binEdges_mass);
+      addTH1D(jet_tag + "_J2_energyCorr", binEdges_energyCorr);
+      addTH1D(jet_tag + "_J2_energyFracEm", binEdges_energyFracEm);
+      addTH1D(jet_tag + "_J2_nConst", binEdges_nConst);
+
+      addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
+      addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
+      addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
+      addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
+      addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
+      addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+      addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+      addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
+      addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
+      addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
+      addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
     }
   }
 }
@@ -364,35 +384,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
 
   H1("L1TJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
-  fill_dijet_plots("L1TJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, -1.f, -1.f);
-
-  constexpr auto pi3_f{std::numbers::pi_v<float> / 3.f};
-
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, 1.1f, pi3_f);
-
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p0to0p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, -1.f, 0.1f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p1to0p2", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.1f, 0.2f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p2to0p3", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.2f, 0.3f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p3to0p4", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.3f, 0.4f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p4to0p5", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.4f, 0.5f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p5to0p6", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.5f, 0.6f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p6to0p7", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.6f, 0.7f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p7to0p8", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.7f, 0.8f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p8to0p9", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.8f, 0.9f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY0p9to1p0", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 0.9f, 1.0f, pi3_f);
-  fill_dijet_plots(
-      "L1TJet_Std_Mjj150dPhi1p0dY1p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, false, 150.f, 1.0f, 1.1f, pi3_f);
+  for (auto const& djc : sr_sel_map_) {
+    fill_dijet_plots("L1TJet_Std_" + djc.first, wgt, nJets30, nJets40, nJets50, j1, j2, false, djc.second);
+  }
 
   Jet j1_cmb{j1};
   j1_cmb.index = -1;
@@ -428,151 +422,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
     std::swap(j1_cmb, j2_cmb);
   }
 
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p0to1p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   -1.f,
-                   1.1f,
-                   pi3_f);
-
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p0to0p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   -1.f,
-                   0.1f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p1to0p2",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.1f,
-                   0.2f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p2to0p3",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.2f,
-                   0.3f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p3to0p4",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.3f,
-                   0.4f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p4to0p5",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.4f,
-                   0.5f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p5to0p6",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.5f,
-                   0.6f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p6to0p7",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.6f,
-                   0.7f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p7to0p8",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.7f,
-                   0.8f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p8to0p9",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.8f,
-                   0.9f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY0p9to1p0",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   0.9f,
-                   1.0f,
-                   pi3_f);
-  fill_dijet_plots("L1TJet_Cmb_Mjj150dPhi1p0dY1p0to1p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   false,
-                   150.f,
-                   1.0f,
-                   1.1f,
-                   pi3_f);
+  for (auto const& djc : sr_sel_map_) {
+    fill_dijet_plots("L1TJet_Cmb_" + djc.first, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, djc.second);
+  }
 }
 
 void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int const selectionType) {
@@ -696,35 +548,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
 
   H1("L1SCaloJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
-  fill_dijet_plots("L1SCaloJet_Std_Mjj150", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, -1.f, -1.f);
-
-  constexpr auto pi3_f{std::numbers::pi_v<float> / 3.f};
-
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, 1.1f, pi3_f);
-
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p0to0p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, -1.f, 0.1f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p1to0p2", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.1f, 0.2f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p2to0p3", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.2f, 0.3f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p3to0p4", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.3f, 0.4f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p4to0p5", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.4f, 0.5f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p5to0p6", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.5f, 0.6f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p6to0p7", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.6f, 0.7f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p7to0p8", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.7f, 0.8f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p8to0p9", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.8f, 0.9f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY0p9to1p0", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 0.9f, 1.0f, pi3_f);
-  fill_dijet_plots(
-      "L1SCaloJet_Std_Mjj150dPhi1p0dY1p0to1p1", wgt, nJets30, nJets40, nJets50, j1, j2, true, 150.f, 1.0f, 1.1f, pi3_f);
+  for (auto const& djc : sr_sel_map_) {
+    fill_dijet_plots("L1SCaloJet_Std_" + djc.first, wgt, nJets30, nJets40, nJets50, j1, j2, true, djc.second);
+  }
 
   Jet j1_cmb{j1};
   j1_cmb.index = -1;
@@ -765,154 +591,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
     std::swap(j1_cmb, j2_cmb);
   }
 
-  fill_dijet_plots(
-      "L1SCaloJet_Cmb_Mjj150", wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, 150.f, -1.f, -1.f, -1.f);
-
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p0to1p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   -1.f,
-                   1.1f,
-                   pi3_f);
-
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p0to0p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   -1.f,
-                   0.1f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p1to0p2",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.1f,
-                   0.2f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p2to0p3",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.2f,
-                   0.3f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p3to0p4",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.3f,
-                   0.4f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p4to0p5",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.4f,
-                   0.5f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p5to0p6",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.5f,
-                   0.6f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p6to0p7",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.6f,
-                   0.7f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p7to0p8",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.7f,
-                   0.8f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p8to0p9",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.8f,
-                   0.9f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY0p9to1p0",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   0.9f,
-                   1.0f,
-                   pi3_f);
-  fill_dijet_plots("L1SCaloJet_Cmb_Mjj150dPhi1p0dY1p0to1p1",
-                   wgt,
-                   nJets30,
-                   nJets40,
-                   nJets50,
-                   j1_cmb,
-                   j2_cmb,
-                   true,
-                   150.f,
-                   1.0f,
-                   1.1f,
-                   pi3_f);
+  for (auto const& djc : sr_sel_map_) {
+    fill_dijet_plots("L1SCaloJet_Cmb_" + djc.first, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, djc.second);
+  }
 }
 
 void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_label,
@@ -923,67 +604,60 @@ void L1ScoutSelDiJetAnalysisDriver::fill_dijet_plots(std::string const& plot_lab
                                                      Jet const& j1,
                                                      Jet const& j2,
                                                      bool const fillExtraJetVars,
-                                                     float const minDijetMass,
-                                                     float const minDijetDeltaRapAbs,
-                                                     float const maxDijetDeltaRapAbs,
-                                                     float const minDijetDeltaPhiAbs) {
+                                                     dijetCut const& dijet_cut) {
   auto const j1j2_p4{j1.p4 + j2.p4};
 
   auto const j1j2_mass{j1j2_p4.mass()};
 
-  if (minDijetMass < 0.f or j1j2_mass > minDijetMass) {
-    auto const deltaRap{j1.p4.Rapidity() - j2.p4.Rapidity()};
-    auto const deltaEta{j1.p4.eta() - j2.p4.eta()};
-    auto const deltaPhi{utils::deltaPhi(j1.p4.phi(), j2.p4.phi())};
+  auto const deltaRap{j1.p4.Rapidity() - j2.p4.Rapidity()};
+  auto const deltaEta{j1.p4.eta() - j2.p4.eta()};
+  auto const deltaPhi{utils::deltaPhi(j1.p4.phi(), j2.p4.phi())};
 
-    auto const deltaRapAbs{std::abs(deltaRap)};
-    auto const deltaEtaAbs{std::abs(deltaEta)};
-    auto const deltaPhiAbs{std::abs(deltaPhi)};
+  auto const deltaRapAbs{std::abs(deltaRap)};
+  auto const deltaEtaAbs{std::abs(deltaEta)};
+  auto const deltaPhiAbs{std::abs(deltaPhi)};
 
-    if ((minDijetDeltaRapAbs < 0.f or deltaRapAbs >= minDijetDeltaRapAbs) and
-        (maxDijetDeltaRapAbs < 0.f or deltaRapAbs < maxDijetDeltaRapAbs) and
-        (minDijetDeltaPhiAbs < 0.f or deltaPhiAbs >= minDijetDeltaPhiAbs)) {
-      H1(plot_label + "_nJets30")->Fill(nJets30, wgt);
-      H1(plot_label + "_nJets40")->Fill(nJets40, wgt);
-      H1(plot_label + "_nJets50")->Fill(nJets50, wgt);
+  if (dijet_cut(j1j2_mass, deltaRapAbs, deltaPhiAbs)) {
+    H1(plot_label + "_nJets30")->Fill(nJets30, wgt);
+    H1(plot_label + "_nJets40")->Fill(nJets40, wgt);
+    H1(plot_label + "_nJets50")->Fill(nJets50, wgt);
 
-      H1(plot_label + "_J1_pt")->Fill(j1.p4.pt(), wgt);
-      H1(plot_label + "_J1_eta")->Fill(j1.p4.eta(), wgt);
-      H2(plot_label + "_J1_eta_phi")->Fill(j1.p4.eta(), j1.p4.phi(), wgt);
-      H1(plot_label + "_J1_phi")->Fill(j1.p4.phi(), wgt);
+    H1(plot_label + "_J1_pt")->Fill(j1.p4.pt(), wgt);
+    H1(plot_label + "_J1_eta")->Fill(j1.p4.eta(), wgt);
+    H2(plot_label + "_J1_eta_phi")->Fill(j1.p4.eta(), j1.p4.phi(), wgt);
+    H1(plot_label + "_J1_phi")->Fill(j1.p4.phi(), wgt);
 
-      H1(plot_label + "_J2_pt")->Fill(j2.p4.pt(), wgt);
-      H1(plot_label + "_J2_eta")->Fill(j2.p4.eta(), wgt);
-      H2(plot_label + "_J2_eta_phi")->Fill(j2.p4.eta(), j2.p4.phi(), wgt);
-      H1(plot_label + "_J2_phi")->Fill(j2.p4.phi(), wgt);
+    H1(plot_label + "_J2_pt")->Fill(j2.p4.pt(), wgt);
+    H1(plot_label + "_J2_eta")->Fill(j2.p4.eta(), wgt);
+    H2(plot_label + "_J2_eta_phi")->Fill(j2.p4.eta(), j2.p4.phi(), wgt);
+    H1(plot_label + "_J2_phi")->Fill(j2.p4.phi(), wgt);
 
-      if (fillExtraJetVars) {
-        H1(plot_label + "_J1_ptUncorr")->Fill(j1.p4.pt() / j1.energyCorr, wgt);
-        H1(plot_label + "_J1_mass")->Fill(j1.p4.mass(), wgt);
-        H1(plot_label + "_J1_energyCorr")->Fill(j1.energyCorr, wgt);
-        H1(plot_label + "_J1_energyFracEm")->Fill(j1.energyFracEm, wgt);
-        H1(plot_label + "_J1_nConst")->Fill(j1.nConst, wgt);
+    if (fillExtraJetVars) {
+      H1(plot_label + "_J1_ptUncorr")->Fill(j1.p4.pt() / j1.energyCorr, wgt);
+      H1(plot_label + "_J1_mass")->Fill(j1.p4.mass(), wgt);
+      H1(plot_label + "_J1_energyCorr")->Fill(j1.energyCorr, wgt);
+      H1(plot_label + "_J1_energyFracEm")->Fill(j1.energyFracEm, wgt);
+      H1(plot_label + "_J1_nConst")->Fill(j1.nConst, wgt);
 
-        H1(plot_label + "_J2_ptUncorr")->Fill(j2.p4.pt() / j2.energyCorr, wgt);
-        H1(plot_label + "_J2_mass")->Fill(j2.p4.mass(), wgt);
-        H1(plot_label + "_J2_energyCorr")->Fill(j2.energyCorr, wgt);
-        H1(plot_label + "_J2_energyFracEm")->Fill(j2.energyFracEm, wgt);
-        H1(plot_label + "_J2_nConst")->Fill(j2.nConst, wgt);
-      }
-
-      H1(plot_label + "_J1J2_pt")->Fill(j1j2_p4.pt(), wgt);
-      H1(plot_label + "_J1J2_eta")->Fill(j1j2_p4.eta(), wgt);
-      H1(plot_label + "_J1J2_phi")->Fill(j1j2_p4.phi(), wgt);
-      H1(plot_label + "_J1J2_mass")->Fill(j1j2_mass, wgt);
-
-      H1(plot_label + "_J1J2_deltaRap")->Fill(deltaRap, wgt);
-      H1(plot_label + "_J1J2_deltaEta")->Fill(deltaEta, wgt);
-      H1(plot_label + "_J1J2_deltaPhi")->Fill(deltaPhi, wgt);
-
-      H1(plot_label + "_J1J2_deltaRapAbs")->Fill(deltaRapAbs, wgt);
-      H2(plot_label + "_J1J2_deltaRapAbs_deltaPhiAbs")->Fill(deltaRapAbs, deltaPhiAbs, wgt);
-      H1(plot_label + "_J1J2_deltaEtaAbs")->Fill(deltaEtaAbs, wgt);
-      H1(plot_label + "_J1J2_deltaPhiAbs")->Fill(deltaPhiAbs, wgt);
+      H1(plot_label + "_J2_ptUncorr")->Fill(j2.p4.pt() / j2.energyCorr, wgt);
+      H1(plot_label + "_J2_mass")->Fill(j2.p4.mass(), wgt);
+      H1(plot_label + "_J2_energyCorr")->Fill(j2.energyCorr, wgt);
+      H1(plot_label + "_J2_energyFracEm")->Fill(j2.energyFracEm, wgt);
+      H1(plot_label + "_J2_nConst")->Fill(j2.nConst, wgt);
     }
+
+    H1(plot_label + "_J1J2_pt")->Fill(j1j2_p4.pt(), wgt);
+    H1(plot_label + "_J1J2_eta")->Fill(j1j2_p4.eta(), wgt);
+    H1(plot_label + "_J1J2_phi")->Fill(j1j2_p4.phi(), wgt);
+    H1(plot_label + "_J1J2_mass")->Fill(j1j2_mass, wgt);
+
+    H1(plot_label + "_J1J2_deltaRap")->Fill(deltaRap, wgt);
+    H1(plot_label + "_J1J2_deltaEta")->Fill(deltaEta, wgt);
+    H1(plot_label + "_J1J2_deltaPhi")->Fill(deltaPhi, wgt);
+
+    H1(plot_label + "_J1J2_deltaRapAbs")->Fill(deltaRapAbs, wgt);
+    H2(plot_label + "_J1J2_deltaRapAbs_deltaPhiAbs")->Fill(deltaRapAbs, deltaPhiAbs, wgt);
+    H1(plot_label + "_J1J2_deltaEtaAbs")->Fill(deltaEtaAbs, wgt);
+    H1(plot_label + "_J1J2_deltaPhiAbs")->Fill(deltaPhiAbs, wgt);
   }
 }
