@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-TARGET_DIR=out2_l1sSelDiJet_sel1
+TARGET_DIR=out2_l1sSelDiJet_sel0
 [ $# -eq 0 ] || TARGET_DIR="${1}"
 
 # Merge outputs of batch jobs into one file per sample
