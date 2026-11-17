@@ -24,6 +24,7 @@ public:
 
 protected:
   int selectionType_ = -1;
+  bool forTriggerEfficiency_ = false;
 
   using P4f = ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>>;
 
@@ -67,8 +68,8 @@ protected:
 
   bool bxFilterDijetEt30() const;
 
-  void fill_plots_l1tJets(float const wgt, int const selectionType);
-  void fill_plots_l1sCaloJets(float const wgt, int const selectionType);
+  void fill_plots_l1tJets(float const wgt, float const maxJetEtaAbs, std::vector<std::string> const& finalTags);
+  void fill_plots_l1sCaloJets(float const wgt, float const maxJetEtaAbs, std::vector<std::string> const& finalTags);
 
   void fill_dijet_plots(std::string const& plot_label,
                         float const wgt,

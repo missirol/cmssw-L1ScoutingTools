@@ -332,9 +332,9 @@ eval `scramv1 runtime -sh`
 
 cd "${{MY_OUTPUT_DIR}}"/job_"${{MY_JOB_INDEX}}"
 
-mapfile -t JOB_SPECS < <(../get_job_specs.py ../jobs.json "${{MY_JOB_INDEX}}")
-
 [ ! -f flag.done ] || exit 0
+
+mapfile -t JOB_SPECS < <(../get_job_specs.py ../jobs.json "${{MY_JOB_INDEX}}")
 
 rm -f out.root
 

@@ -25,9 +25,11 @@ L1ScoutSelDiJetAnalysisDriver::L1ScoutSelDiJetAnalysisDriver(const std::string& 
 void L1ScoutSelDiJetAnalysisDriver::init() {
   selectionType_ = std::atoi(getOption("selectionType").c_str());
 
-  if (selectionType_ != 0 and selectionType_ != 1) {
+  if (selectionType_ != 0 and selectionType_ != 1 and selectionType_ != 2) {
     throw std::runtime_error("invalid value of option \"selectionType\": " + std::to_string(selectionType_));
   }
+
+  forTriggerEfficiency_ = (selectionType_ == 2);
 
   addTH1D("weight", 100, -5, 5);
   addTH1D("eventsProcessed_unwgt", {0, 1});
@@ -77,9 +79,11 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
   std::vector<float> const binEdges_mass(
       {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 130, 150, 170, 190, 210, 230, 250, 270, 300, 400, 500, 600});
 
-  std::vector<float> binEdges_mass2(551);
+  float const cut_minMjj{forTriggerEfficiency_ ? 0.f : 150.f};
+
+  std::vector<float> binEdges_mass2(501);
   for (uint idx = 0; idx < binEdges_mass2.size(); ++idx) {
-    binEdges_mass2.at(idx) = 170.f + 1.f * idx;
+    binEdges_mass2.at(idx) = cut_minMjj + 1.f * idx;
   }
 
   std::vector<float> binEdges_deltaRap(161);
@@ -112,7 +116,10 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
     binEdges_deltaPhiAbs.at(idx) = pi_f * 0.025f * idx;
   }
 
-  addTH1D("SelBx_DijetEt30", {0, 1});
+  if (not forTriggerEfficiency_) {
+    addTH1D("SelBx_DijetEt30", {0, 1});
+  }
+
   addTH1D("SelBx_l1ScBXsWithCaloTowers", {0, 1});
 
   // L1T Jets
@@ -121,8 +128,6 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
   addTH1D("L1TJet_passSelBx_passTheDiJet", {0, 1});
 
   std::vector<std::string> const tags1{"Std", "Cmb"};
-
-  float const cut_minMjj{170.f};
 
   std::vector<std::pair<std::string, std::pair<std::vector<float>, std::vector<float>>>> categories{
       {"Opt0", {{0.f, 0.5f, 1.f, 1.5f, 2.f}, {2.1f, 2.8f, 2.9f, 3.0f, 3.05f, 3.2f}}},
@@ -162,35 +167,43 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
     }
   }
 
+  std::vector<std::string> tags3{""};
+  if (forTriggerEfficiency_) {
+    tags3.reserve(2);
+    tags3.emplace_back("PassFilterDijetEt30");
+  }
+
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
-      auto const jet_tag{"L1TJet_" + tag1 + "_" + tag2};
+      for (auto const& tag3 : tags3) {
+        auto const jet_tag{"L1TJet_" + tag1 + "_" + tag2 + tag3};
 
-      addTH1D(jet_tag + "_nJets30", binEdges_njets);
-      addTH1D(jet_tag + "_nJets40", binEdges_njets);
-      addTH1D(jet_tag + "_nJets50", binEdges_njets);
+        addTH1D(jet_tag + "_nJets30", binEdges_njets);
+        addTH1D(jet_tag + "_nJets40", binEdges_njets);
+        addTH1D(jet_tag + "_nJets50", binEdges_njets);
 
-      addTH1D(jet_tag + "_J1_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J1_eta", binEdges_eta);
-      addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D(jet_tag + "_J1_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J1_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J1_eta", binEdges_eta);
+        addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
+        addTH1D(jet_tag + "_J1_phi", binEdges_phi);
 
-      addTH1D(jet_tag + "_J2_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J2_eta", binEdges_eta);
-      addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D(jet_tag + "_J2_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J2_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J2_eta", binEdges_eta);
+        addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
+        addTH1D(jet_tag + "_J2_phi", binEdges_phi);
 
-      addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
-      addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
-      addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
-      addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
-      addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
-      addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
-      addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
-      addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
-      addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+        addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
+        addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
+        addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
+        addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+        addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+        addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
+        addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
+        addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
+        addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+      }
     }
   }
 
@@ -216,43 +229,45 @@ void L1ScoutSelDiJetAnalysisDriver::init() {
 
   for (auto const& tag1 : tags1) {
     for (auto const& tag2 : tags2) {
-      auto const jet_tag{"L1SCaloJet_" + tag1 + "_" + tag2};
+      for (auto const& tag3 : tags3) {
+        auto const jet_tag{"L1SCaloJet_" + tag1 + "_" + tag2 + tag3};
 
-      addTH1D(jet_tag + "_nJets30", binEdges_njets);
-      addTH1D(jet_tag + "_nJets40", binEdges_njets);
-      addTH1D(jet_tag + "_nJets50", binEdges_njets);
+        addTH1D(jet_tag + "_nJets30", binEdges_njets);
+        addTH1D(jet_tag + "_nJets40", binEdges_njets);
+        addTH1D(jet_tag + "_nJets50", binEdges_njets);
 
-      addTH1D(jet_tag + "_J1_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J1_ptUncorr", binEdges_pt);
-      addTH1D(jet_tag + "_J1_eta", binEdges_eta);
-      addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D(jet_tag + "_J1_phi", binEdges_phi);
-      addTH1D(jet_tag + "_J1_mass", binEdges_mass);
-      addTH1D(jet_tag + "_J1_energyCorr", binEdges_energyCorr);
-      addTH1D(jet_tag + "_J1_energyFracEm", binEdges_energyFracEm);
-      addTH1D(jet_tag + "_J1_nConst", binEdges_nConst);
+        addTH1D(jet_tag + "_J1_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J1_ptUncorr", binEdges_pt);
+        addTH1D(jet_tag + "_J1_eta", binEdges_eta);
+        addTH2D(jet_tag + "_J1_eta_phi", binEdges_eta, binEdges_phi);
+        addTH1D(jet_tag + "_J1_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J1_mass", binEdges_mass);
+        addTH1D(jet_tag + "_J1_energyCorr", binEdges_energyCorr);
+        addTH1D(jet_tag + "_J1_energyFracEm", binEdges_energyFracEm);
+        addTH1D(jet_tag + "_J1_nConst", binEdges_nConst);
 
-      addTH1D(jet_tag + "_J2_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J2_ptUncorr", binEdges_pt);
-      addTH1D(jet_tag + "_J2_eta", binEdges_eta);
-      addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
-      addTH1D(jet_tag + "_J2_phi", binEdges_phi);
-      addTH1D(jet_tag + "_J2_mass", binEdges_mass);
-      addTH1D(jet_tag + "_J2_energyCorr", binEdges_energyCorr);
-      addTH1D(jet_tag + "_J2_energyFracEm", binEdges_energyFracEm);
-      addTH1D(jet_tag + "_J2_nConst", binEdges_nConst);
+        addTH1D(jet_tag + "_J2_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J2_ptUncorr", binEdges_pt);
+        addTH1D(jet_tag + "_J2_eta", binEdges_eta);
+        addTH2D(jet_tag + "_J2_eta_phi", binEdges_eta, binEdges_phi);
+        addTH1D(jet_tag + "_J2_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J2_mass", binEdges_mass);
+        addTH1D(jet_tag + "_J2_energyCorr", binEdges_energyCorr);
+        addTH1D(jet_tag + "_J2_energyFracEm", binEdges_energyFracEm);
+        addTH1D(jet_tag + "_J2_nConst", binEdges_nConst);
 
-      addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
-      addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
-      addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
-      addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
-      addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
-      addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
-      addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
-      addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
-      addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
-      addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
-      addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+        addTH1D(jet_tag + "_J1J2_pt", binEdges_pt);
+        addTH1D(jet_tag + "_J1J2_eta", binEdges_eta2);
+        addTH1D(jet_tag + "_J1J2_phi", binEdges_phi);
+        addTH1D(jet_tag + "_J1J2_mass", binEdges_mass2);
+        addTH1D(jet_tag + "_J1J2_deltaRap", binEdges_deltaRap);
+        addTH1D(jet_tag + "_J1J2_deltaRapAbs", binEdges_deltaRapAbs);
+        addTH2D(jet_tag + "_J1J2_deltaRapAbs_deltaPhiAbs", binEdges_deltaRapAbs, binEdges_deltaPhiAbs);
+        addTH1D(jet_tag + "_J1J2_deltaEta", binEdges_deltaEta);
+        addTH1D(jet_tag + "_J1J2_deltaEtaAbs", binEdges_deltaEtaAbs);
+        addTH1D(jet_tag + "_J1J2_deltaPhi", binEdges_deltaPhi);
+        addTH1D(jet_tag + "_J1J2_deltaPhiAbs", binEdges_deltaPhiAbs);
+      }
     }
   }
 }
@@ -286,12 +301,15 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
   H1("eventsProcessed_unwgt")->Fill(0.5);
   H1("eventsProcessed")->Fill(0.5, wgt);
 
-  auto const selBx_DijetEt30{isRealData ? this->value<bool>("SelBx_DijetEt30") : bxFilterDijetEt30()};
-  if (not selBx_DijetEt30) {
-    return;
-  }
+  auto const selBx_DijetEt30{(isRealData and not forTriggerEfficiency_) ? this->value<bool>("SelBx_DijetEt30")
+                                                                        : bxFilterDijetEt30()};
+  if (not forTriggerEfficiency_) {
+    if (not selBx_DijetEt30) {
+      return;
+    }
 
-  H1("SelBx_DijetEt30")->Fill(0.5, wgt);
+    H1("SelBx_DijetEt30")->Fill(0.5, wgt);
+  }
 
   auto const selBx_l1ScBXsWithCaloTowers{isRealData ? this->value<bool>("SelBx_l1ScBXsWithCaloTowers") : true};
   if (not selBx_l1ScBXsWithCaloTowers) {
@@ -300,12 +318,22 @@ void L1ScoutSelDiJetAnalysisDriver::analyze() {
 
   H1("SelBx_l1ScBXsWithCaloTowers")->Fill(0.5, wgt);
 
-  fill_plots_l1tJets(wgt, selectionType_);
+  float const maxJetEtaAbs{(selectionType_ == 0) ? 1.1f : 2.8f};
 
-  fill_plots_l1sCaloJets(wgt, selectionType_);
+  std::vector<std::string> finalTags{""};
+  if (forTriggerEfficiency_ and selBx_DijetEt30) {
+    finalTags.reserve(2);
+    finalTags.emplace_back("PassFilterDijetEt30");
+  }
+
+  fill_plots_l1tJets(wgt, maxJetEtaAbs, finalTags);
+
+  fill_plots_l1sCaloJets(wgt, maxJetEtaAbs, finalTags);
 }
 
-void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int const selectionType) {
+void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt,
+                                                       float const maxJetEtaAbs,
+                                                       std::vector<std::string> const& finalTags) {
   auto const a_size = this->value<int>("nL1Jet");
   auto const& a_pt = this->array<float>("L1Jet_pt");
   auto const& a_eta = this->array<float>("L1Jet_eta");
@@ -319,8 +347,6 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
   sortIdxs.reserve(a_size);
 
   auto nSatJets{0u};
-
-  float const maxJetEtaAbs{(selectionType == 0) ? 2.8f : 1.1f};
 
   for (auto const idx : jetIdxs) {
     auto const j_pt{a_pt[idx]};
@@ -391,7 +417,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
   H1("L1TJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
   for (auto const& djc : sr_sel_map_) {
-    fill_dijet_plots("L1TJet_Std_" + djc.first, wgt, nJets30, nJets40, nJets50, j1, j2, false, djc.second);
+    for (auto const& tag : finalTags) {
+      fill_dijet_plots("L1TJet_Std_" + djc.first + tag, wgt, nJets30, nJets40, nJets50, j1, j2, false, djc.second);
+    }
   }
 
   Jet j1_cmb{j1};
@@ -429,11 +457,16 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1tJets(float const wgt, int cons
   }
 
   for (auto const& djc : sr_sel_map_) {
-    fill_dijet_plots("L1TJet_Cmb_" + djc.first, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, djc.second);
+    for (auto const& tag : finalTags) {
+      fill_dijet_plots(
+          "L1TJet_Cmb_" + djc.first + tag, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, false, djc.second);
+    }
   }
 }
 
-void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int const selectionType) {
+void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt,
+                                                           float const maxJetEtaAbs,
+                                                           std::vector<std::string> const& finalTags) {
   auto const a_size = this->value<int>("nL1CaloJet");
   auto const& a_pt = this->array<float>("L1CaloJet_pt");
   auto const& a_eta = this->array<float>("L1CaloJet_eta");
@@ -451,8 +484,6 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
 
   std::vector<int> sortIdxs{};
   sortIdxs.reserve(a_size);
-
-  float const maxJetEtaAbs{(selectionType == 0) ? 2.8f : 1.1f};
 
   auto nSatJets{0u};
 
@@ -555,7 +586,9 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
   H1("L1SCaloJet_passSelBx_passTheDiJet")->Fill(0.5, wgt);
 
   for (auto const& djc : sr_sel_map_) {
-    fill_dijet_plots("L1SCaloJet_Std_" + djc.first, wgt, nJets30, nJets40, nJets50, j1, j2, true, djc.second);
+    for (auto const& tag : finalTags) {
+      fill_dijet_plots("L1SCaloJet_Std_" + djc.first + tag, wgt, nJets30, nJets40, nJets50, j1, j2, true, djc.second);
+    }
   }
 
   Jet j1_cmb{j1};
@@ -598,7 +631,10 @@ void L1ScoutSelDiJetAnalysisDriver::fill_plots_l1sCaloJets(float const wgt, int 
   }
 
   for (auto const& djc : sr_sel_map_) {
-    fill_dijet_plots("L1SCaloJet_Cmb_" + djc.first, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, djc.second);
+    for (auto const& tag : finalTags) {
+      fill_dijet_plots(
+          "L1SCaloJet_Cmb_" + djc.first + tag, wgt, nJets30, nJets40, nJets50, j1_cmb, j2_cmb, true, djc.second);
+    }
   }
 }
 
