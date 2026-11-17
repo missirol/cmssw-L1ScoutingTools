@@ -26,18 +26,17 @@ types of NanoAOD data sets for L1S analyses.
 
 ## Setup
 
-Minimal setup instructions.
 ```bash
-cmsrel CMSSW_17_0_0_pre5
-cd CMSSW_17_0_0_pre5/src
+export SCRAM_ARCH=el8_amd64_gcc13
+cmsrel CMSSW_17_0_0
+cd CMSSW_17_0_0/src
 cmsenv
 git cms-init --ssh
-git cms-merge-topic missirol:devel_l1sRun3CaloTowers_170X_v2
+git cms-merge-topic missirol:l1sRun3CaloTowers_v0.3.X
+git checkout -b l1sRun3CaloTowers_v0.3.X 9777bb587d4
 git clone git@github.com:missirol/cmssw-L1ScoutingTools.git L1ScoutingTools -o missirol
 scram build
 ```
-
-
 
 ## NTuple production
 

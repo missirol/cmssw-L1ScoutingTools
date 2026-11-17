@@ -32,7 +32,7 @@ SAMPLE_LABELS=(
 
 # Create list of EDM files for pileup sample
 PILEUP_FILELIST="${THIS_DIR}"/../data/Neutrino_E10_gun_RunIIISummer24_PREMIX.txt
-[ -f "${PILEUP_FILELIST}" ] || "${THIS_DIR}"/../data/create_files.sh
+[ -f "${PILEUP_FILELIST}" ] || "${THIS_DIR}"/../data/filelist_NeutrinoGun_RunIIISummer24.sh
 
 NUMTHREADS=4
 JOBFLAVOUR=longlunch

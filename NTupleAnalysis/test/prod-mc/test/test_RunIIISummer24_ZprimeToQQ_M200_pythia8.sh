@@ -17,7 +17,7 @@ fi
 
 # Create list of EDM files for pileup sample
 PILEUP_FILELIST="${THIS_DIR}"/../data/Neutrino_E10_gun_RunIIISummer24_PREMIX.txt
-[ -f "${PILEUP_FILELIST}" ] || "${THIS_DIR}"/../data/create_files.sh
+[ -f "${PILEUP_FILELIST}" ] || "${THIS_DIR}"/../data/filelist_NeutrinoGun_RunIIISummer24.sh
 
 bdriverStepChain \
  -w "${THIS_DIR}"/../wfs/wf_ZprimeToQQ_TuneCP5_13p6TeV_pythia8.json \

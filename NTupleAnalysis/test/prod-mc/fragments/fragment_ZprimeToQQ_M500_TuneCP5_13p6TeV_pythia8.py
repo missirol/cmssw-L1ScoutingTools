@@ -16,7 +16,7 @@ generator = cms.EDFilter("Pythia8ConcurrentGeneratorFilter",
             processParameters = cms.vstring(
                 'NewGaugeBoson:ffbar2gmZZprime = on',
                 'Zprime:gmZmode = 3',
-                '32:m0 = 400.0', # mass of Z'
+                '32:m0 = 500.0', # mass of Z'
                 '32:mMin = 1.0',
                 '32:mWidth = 0.001',
                 '32:doForceWidth = on',
@@ -31,3 +31,5 @@ generator = cms.EDFilter("Pythia8ConcurrentGeneratorFilter",
             )
         )
 )
+
+ProductionFilterSequence = cms.Sequence(generator)
