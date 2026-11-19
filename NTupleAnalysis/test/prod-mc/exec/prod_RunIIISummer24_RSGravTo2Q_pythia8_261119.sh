@@ -3,18 +3,7 @@
 [ $# -eq 2 ] || exit 1
 
 OUT_DIR="${1}"
-
-if [ -d "${OUT_DIR}" ]; then
-  printf "%s\n" ">> ERROR -- target output directory already exists: ${OUT_DIR}"
-  exit 1
-fi
-
 OUT_DIR_CMSRUN="${2}"
-
-if [ -d "${OUT_DIR_CMSRUN}" ]; then
-  printf "%s\n" ">> ERROR -- target directory for cmsRun outputs already exists: ${OUT_DIR_CMSRUN}"
-  exit 1
-fi
 
 THIS_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
@@ -36,7 +25,14 @@ SAMPLE_LABELS=(
 
 # Create list of EDM files for pileup sample
 PILEUP_FILELIST="${THIS_DIR}"/../data/Neutrino_E10_gun_RunIIISummer24_PREMIX.txt
-[ -f "${PILEUP_FILELIST}" ] || "${THIS_DIR}"/../data/filelist_NeutrinoGun_RunIIISummer24.sh
+if [ ! -f "${PILEUP_FILELIST}" ]; then
+  dasFilelist \
+    -d /Neutrino_E-10_gun/RunIIISummer24PrePremix-Premixlib2024_140X_mcRun3_2024_realistic_v26-v1/PREMIX \
+    -s T2_CH_CERN \
+    -o "${PILEUP_FILELIST}" \
+    --fail-if-empty \
+    -j 8
+fi
 
 NUMTHREADS=4
 JOBFLAVOUR=workday
