@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""Parallel replacement for dasgo.sh: list files of a dataset hosted at a given site."""
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+
+def fmt_duration(seconds: float) -> str:
+    m, s = divmod(int(round(seconds)), 60)
+    h, m = divmod(m, 60)
+    if h:
+        return f"{h}h {m:02d}m {s:02d}s"
+    if m:
+        return f"{m}m {s:02d}s"
+    return f"{seconds:.1f}s"
+
+
+def ensure_proxy() -> None:
+    proxy = os.environ.get("X509_USER_PROXY")
+    if not proxy or not os.path.isfile(proxy):
+        subprocess.run(["voms-proxy-init", "--voms", "cms", "--rfc", "--valid", "168:00"], check=True)
+
+
+def das(query: str, retries: int = 3, timeout: int = 600) -> list[str]:
+    cmd = ["dasgoclient", "-query", query]
+    for attempt in range(1, retries + 1):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=True)
+            return [l.strip() for l in r.stdout.splitlines() if l.strip()]
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            if attempt == retries:
+                raise RuntimeError(f"query failed: {query!r}: {e}") from e
+            time.sleep(2 ** attempt)  # simple backoff
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("-d", "--dataset", required=True, help="dataset name (e.g. /PD/Campaign-Proc-v1/TIER)")
+    ap.add_argument("-s", "--site", required=True, help="site name (e.g. T2_CH_CERN)")
+    ap.add_argument("-o", "--output", type=Path, required=True, help="output file path")
+    ap.add_argument("-j", "--jobs", type=int, default=8, help="parallel queries (be gentle with DAS)")
+    ap.add_argument("--single-query", action="store_true",
+                    help="one 'file dataset=... site=...' query instead of one per block")
+    ap.add_argument("--no-site-filter-blocks", action="store_true",
+                    help="list all blocks of the dataset, not only those at the site")
+    ap.add_argument("--fail-if-empty", action="store_true",
+                    help="exit with an error (and write no output) if no files are found")
+    args = ap.parse_args()
+
+    ensure_proxy()
+    t_start = time.monotonic()
+    print(f"Dataset: {args.dataset}\nSite: {args.site}", file=sys.stderr)
+
+    files: set[str] = set()
+
+    if args.single_query:
+        files.update(das(f"file dataset={args.dataset} site={args.site}"))
+    else:
+        block_q = f"block dataset={args.dataset}"
+        if not args.no_site_filter_blocks:
+            block_q += f" site={args.site}"
+        blocks = sorted(set(das(block_q)))
+        print(f"{len(blocks)} blocks", file=sys.stderr)
+
+        empty, failed = [], []
+        with ThreadPoolExecutor(max_workers=args.jobs) as ex:
+            futs = {ex.submit(das, f"file block={b} site={args.site}"): b for b in blocks}
+            for i, fut in enumerate(as_completed(futs), 1):
+                b = futs[fut]
+                try:
+                    res = fut.result()
+                    (files.update(res) if res else empty.append(b))
+                except Exception as e:
+                    failed.append(b)
+                    print(e, file=sys.stderr)
+                if i % 25 == 0 or i == len(blocks):
+                    print(f"{i}/{len(blocks)} blocks done", file=sys.stderr)
+
+        if failed:
+            sys.exit(
+                f"{len(failed)} blocks failed; output NOT written "
+                f"(elapsed: {fmt_duration(time.monotonic() - t_start)})"
+            )
+        if empty:
+            print(f"note: {len(empty)} blocks returned no files at {args.site}", file=sys.stderr)
+
+    if args.fail_if_empty and not files:
+        sys.exit(
+            f"no files found for dataset {args.dataset} at site {args.site}; output NOT written "
+            f"(elapsed: {fmt_duration(time.monotonic() - t_start)})"
+        )
+
+    # write atomically: never leave a half-written output behind
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", dir=args.output.parent, delete=False) as tmp:
+        if files:
+            tmp.write("\n".join(sorted(files)) + "\n")
+    os.replace(tmp.name, args.output)
+
+    print(f"Output file: {args.output} ({len(files)} files)", file=sys.stderr)
+    print(f"Elapsed time: {fmt_duration(time.monotonic() - t_start)}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
