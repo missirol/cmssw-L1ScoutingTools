@@ -18,17 +18,14 @@ fi
 JOB_LABEL=tmp_l1sNTuple
 
 # number of events per sample
-NEVT=1000000
+NEVT=5000000
 
 # number of CPUs per HT-Condor job
 # (same as number of threads and
 # CMSSW streams per cmsRun job)
-NTHREADS_PER_JOB=8
+NTHREADS_PER_JOB=4
 
 declare -A samplesMap
-
-# QCD Pt-binned
-samplesMap["Run3Summer23PostBPix_QCD_Pt30to50"]="/QCD_PT-30to50_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixMiniAODv4-130X_mcRun3_2023_realistic_postBPix_v2-v2/GEN-SIM-RAW"
 
 # QCD Pt-Flat
 samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_EpsilonPU"]="/QCD_Bin-PT-15to7000_Par-PT-flat2022_TuneCP5_13p6TeV_pythia8/Run3Winter25Digi-EpsilonPU_142X_mcRun3_2025_realistic_v9-v4/GEN-SIM-RAW"
@@ -38,7 +35,7 @@ samplesMap["Run3Winter25_QCD_PtFlat15to7000_13p6TeV_FlatPU0to120"]="/QCD_Bin-PT-
 samplesMap["Run3Winter25_TTbar_13p6TeV"]="/TT_TuneCP5_13p6TeV_powheg-pythia8/Run3Winter25Digi-142X_mcRun3_2025_realistic_v7-v2/GEN-SIM-RAW"
 
 # Options for job submission (e.g. JobFlavour)
-JOB_HTC_FLAVOUR="microcentury"
+JOB_HTC_FLAVOUR="longlunch"
 
 COMMON_OPTS=" --filein tmp.root"
 COMMON_OPTS+=" --mc --conditions auto:phase1_2025_realistic --geometry DB:Extended"
@@ -52,10 +49,9 @@ if [ ! -f "${X509_USER_PROXY}" ]; then
   voms-proxy-init --voms cms --rfc --valid 168:00
 fi
 
-cmsDriver.py "${JOB_LABEL}" --process NANO ${COMMON_OPTS} \
+cmsDriver.py "${JOB_LABEL}" --process NANO ${COMMON_OPTS} -n 1 \
   --python_filename "${JOB_LABEL}"_cfg.py --fileout file:"${JOB_LABEL}"_out.root \
-  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMCOnlyJets \
-  -n 1
+  -s RAW2DIGI,NANO:@GENLite+@L1ScoutCaloTowersMCOnlyJets
 
 cat <<@EOF >> "${JOB_LABEL}"_cfg.py
 process.NANOAODoutput.outputCommands += ['drop edmTriggerResults_*_*_*']
