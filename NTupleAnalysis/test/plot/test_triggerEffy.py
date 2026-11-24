@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import ROOT
+import sys
 
 def get_efficiency_graph(hP, hT, bin_ls=[]):
     hP1, hT1 = hP.Clone(), hT.Clone()
@@ -14,15 +15,15 @@ def get_efficiency_graph(hP, hT, bin_ls=[]):
     return eff
 
 def main():
-    ifile = ROOT.TFile.Open('L1Scouting_Run2026D.root')
+    ifile = ROOT.TFile.Open(sys.argv[1])
 
-    ofile = ROOT.TFile('tmp.root', 'recreate')
+    ofile = ROOT.TFile(sys.argv[2], 'recreate')
     ofile.cd()
 
     for key in ifile.GetListOfKeys():
         keyName = key.GetName()
 
-        if not('Opt1' in keyName and keyName.endswith('PassFilterDijetEt30_J1J2_mass')):
+        if not('Std' in keyName and 'Opt1' in keyName and keyName.endswith('PassFilterDijetEt30_J1J2_mass')):
             continue
 
         print(keyName)
@@ -35,6 +36,7 @@ def main():
         geff.Write()
 
     ofile.Close()
+    ifile.Close()
 
 if __name__ == '__main__':
     main()

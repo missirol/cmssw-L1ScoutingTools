@@ -3,35 +3,43 @@
 TARGET_DIR=out2_l1sSelDiJet
 [ $# -lt 1 ] || TARGET_DIR="${1}"
 
-SELEC_TYPE=0
+SELEC_TYPE=1
 [ $# -lt 2 ] || SELEC_TYPE="${2}"
 
 THIS_DIR=$(cd $(dirname -- "${BASH_SOURCE[0]}") && pwd)
 
-run_driver() {
-  bdriver2 -s "${THIS_DIR}"/run.py \
-    -p L1ScoutSelDiJetAnalysisDriver \
-    --opt selectionType="${SELEC_TYPE}" \
-    --os "${SCRAM_ARCH::3}" $@
-}
+INPUT_DIR=/eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/missirol/l1scout/ntuples/261119
 
-run_driver \
-  -i "/eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/missirol/l1scout/ntuples/261104/L1ScoutingSelection_Run2026D/*/*.root" \
-  -o "${TARGET_DIR}"_sel"${SELEC_TYPE}"/jobs/L1ScoutingSelection_Run2026D \
-  --JobFlavour microcentury \
+EXE_CMD="bdriver2 -s ${THIS_DIR}/run.py"
+EXE_CMD+=" -p L1ScoutSelDiJetAnalysisDriver"
+EXE_CMD+=" --os ${SCRAM_ARCH::3}"
+
+${EXE_CMD} \
+  -i "${INPUT_DIR}/L1ScoutingSelection_Run2026D/*/*.root" \
+  -o "${TARGET_DIR}"/sel"${SELEC_TYPE}"/jobs/L1ScoutingSelection_Run2026D \
+  --opt selectionType=${SELEC_TYPE} \
+  --JobFlavour longlunch \
   -f 10
 
-for mass in 200 300 400 500; do
-  run_driver \
-    -i /eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/missirol/l1scout/ntuples/261005/ZprimeToQQ_M"${mass}"_TuneCP5_13p6TeV_pythia8.root \
-    -o "${TARGET_DIR}"_sel"${SELEC_TYPE}"/jobs/ZprimeToQQ_M"${mass}"_TuneCP5_13p6TeV_pythia8 \
-    --JobFlavour espresso \
-    -f 1
+for signalInputFile in $(ls -1 "${INPUT_DIR}"/RSGravTo2Q_*.root); do
+  signalLabel=$(basename "${signalInputFile}")
+  signalLabel=${signalLabel::-5}
+
+  for selecType in "${SELEC_TYPE}" 2; do
+
+    ${EXE_CMD} \
+      -i "${signalInputFile}" \
+      -o "${TARGET_DIR}"/sel"${selecType}"/jobs/"${signalLabel}" \
+      --opt selectionType=${selecType} \
+      --JobFlavour espresso \
+      -f 1
+  done
 done
 
 SELEC_TYPE=2
-run_driver \
-  -i "/eos/cms/store/group/dpg_trigger/comm_trigger/L1Trigger/missirol/l1scout/ntuples/261117/L1Scouting_Run2026D/*/*.root" \
-  -o "${TARGET_DIR}"_sel"${SELEC_TYPE}"/jobs/L1Scouting_Run2026D \
+${EXE_CMD} \
+  -i "${INPUT_DIR}/L1Scouting_Run2026D/*/*.root" \
+  -o "${TARGET_DIR}"/sel"${SELEC_TYPE}"/jobs/L1Scouting_Run2026D \
+  --opt selectionType=${SELEC_TYPE} \
   --JobFlavour microcentury \
   -f 1
