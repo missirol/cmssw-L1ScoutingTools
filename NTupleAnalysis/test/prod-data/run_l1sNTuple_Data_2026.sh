@@ -15,16 +15,6 @@ else
   exit 1
 fi
 
-if [ -d "${ODIR1}" ]; then
-  printf "%s\n" " >>> FATAL -- target output directory already exists: ${ODIR1}"
-  exit 1
-fi
-
-if [ -d "${ODIR2}" ]; then
-  printf "%s\n" " >>> FATAL -- target output directory already exists: ${ODIR2}"
-  exit 1
-fi
-
 mkdir -p "${ODIR1}"/jsons
 JSON_LABEL="${ODIR1}"/jsons/l1sCaloTowersJson2026
 
